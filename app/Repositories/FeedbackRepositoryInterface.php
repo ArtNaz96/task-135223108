@@ -2,7 +2,7 @@
 
 namespace App\Repositories;
 
-use App\DTO\Feedback;
+use App\Models\Feedback;
 
 interface FeedbackRepositoryInterface
 {

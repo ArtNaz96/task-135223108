@@ -2,7 +2,7 @@
 
 namespace App\Repositories;
 
-use App\DTO\Feedback;
+use App\Models\Feedback;
 use Illuminate\Support\Facades\Log;
 
 class LogFeedbackRepository implements FeedbackRepositoryInterface

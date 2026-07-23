@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\DTO\Feedback;
+use App\Models\Feedback;
 use App\Repositories\FeedbackRepositoryInterface;
 
 class FeedbackProcessingService

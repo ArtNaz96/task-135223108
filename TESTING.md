@@ -35,7 +35,7 @@
 ### 2.3. `tests/Feature/Api/V1/MetricsControllerTest.php`
 | Тест | Сценарий |
 |---|---|
-| `it_returns_stub_structure` | `GET /api/v1/metrics` → 200, JSON содержит ожидаемые ключи заглушки (`requests_total`, `errors_total`) |
+| `it_returns_not_implemented` | `GET /api/v1/metrics` → `501 Not Implemented` (маршрут и контроллер существуют, реальная логика — предмет будущей доработки, см. `ARCHITECTURE.md` §4) |
 
 ## 3. Unit-тесты
 

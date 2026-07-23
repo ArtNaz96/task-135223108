@@ -10,8 +10,7 @@ class MetricsController extends Controller
     public function __invoke(): JsonResponse
     {
         return response()->json([
-            'requests_total' => 0,
-            'errors_total' => 0,
-        ]);
+            'message' => 'Not implemented yet',
+        ], 501);
     }
 }

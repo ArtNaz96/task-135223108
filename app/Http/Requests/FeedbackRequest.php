@@ -14,10 +14,10 @@ class FeedbackRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:' . env('FEEDBACK_NAME_MAX_LENGTH', 255)],
             'phone' => ['required', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:255'],
-            'comment' => ['required', 'string', 'max:2000'],
+            'comment' => ['required', 'string', 'max:' . env('FEEDBACK_COMMENT_MAX_LENGTH', 2000)],
         ];
     }
 }
