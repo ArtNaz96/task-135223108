@@ -1,10 +1,15 @@
 <?php
 
-use App\Http\Controllers\ApiController;
-use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\Api\V1\FeedbackController;
+use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\MetricsController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/v1/health', [ApiController::class, 'health']);
+Route::prefix('v1')->name('v1.')->group(function () {
+    Route::post('/contact', FeedbackController::class)
+        ->middleware('throttle:contact-form')
+        ->name('contact.store');
 
-Route::post('/v1/contact', [FeedbackController::class, 'store'])
-    ->middleware('throttle:contact-form');
+    Route::get('/health', HealthController::class)->name('health.show');
+    Route::get('/metrics', MetricsController::class)->name('metrics.show');
+});

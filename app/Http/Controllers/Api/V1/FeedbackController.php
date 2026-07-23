@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\FeedbackRequest;
 use App\Services\FeedbackProcessingService;
 use Illuminate\Http\JsonResponse;
@@ -12,7 +13,7 @@ class FeedbackController extends Controller
         private readonly FeedbackProcessingService $feedbackProcessingService
     ) {}
 
-    public function store(FeedbackRequest $request): JsonResponse
+    public function __invoke(FeedbackRequest $request): JsonResponse
     {
         $feedback = $this->feedbackProcessingService->process($request->validated());
 
