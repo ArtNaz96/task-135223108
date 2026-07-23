@@ -34,29 +34,33 @@
 ### 2.3. Модель данных
 * **`Feedback`**: Анемичная модель данных (POPO — Plain Old PHP Object), описывающая структуру обращения. Формируется на основе данных, прошедших валидацию.
 `(имя, телефон, email, комментарий)` - требуемые поля
+* Дополнительно содержит `id` — генерируется `FeedbackService` по шаблону `YYYYMMDDHHMMSS-<6 случайных цифр>` (дата/время + 6 случайных цифр), сохраняется вместе с остальными атрибутами через `FeedbackRepository`, используется в теме письма владельцу (`Запрос #<id>`).
 
 ### 2.4. Слой доступа к данным (Repository)
 * **`FeedbackRepositoryInterface`** + **`FeedbackRepository`**: Интерфейс вынесен отдельно, чтобы переход v1 → v2 не требовал правок в вызывающем коде (`FeedbackService` зависит только от интерфейса, конкретная реализация связывается в service-провайдере).
 * Отвечает за запись переданной ему модели `Feedback`.
 * Предоставляет метод сохранения (например, `save()`, `store()` или `put()`).
-  * *Реализация v1 (текущая):* Запись данных осуществляется в соответствующий канал логгера `Monolog`.
+  * *Реализация v1 (текущая):* Запись данных осуществляется в отдельный канал `Monolog` — `feedback_storage` (файл `storage/logs/feedback.log`).
   * *Реализация v2 (планируемая):* Переход на полноценную работу с базой данных (БД).
 * Предоставляет метод чтения последних X записей (пригодится позже для реальной реализации `GET /api/metrics`).
+* В репозиторий (и, соответственно, в этот канал) попадают **только валидные** обращения — `Feedback` (POPO) в принципе не может быть собран из невалидных данных, т.к. собирается уже после прохождения `FeedbackRequest`. Логировать невалидные запросы отдельно смысла нет (нечего сохранять), поэтому отдельного лога "всех запросов подряд" не заводим — один и тот же канал `feedback_storage` одновременно закрывает и требование ТЗ "логирование запросов в файл" (в разумной трактовке — валидных), и неявное требование по "хранению запросов в БД" (в имитации — файловое хранилище).
 
 Соответственно, при реализации следует учесть будущий переход от v1 к v2.
 
 ### 2.5. Группа отправления нотификаций
-* потребуется минимальная очередь (можно имитацию — например, синхронный или `database`-драйвер очереди Laravel).
-* **`SendOwnerFeedbackNotification`** (Job + Mailable): письмо владельцу сайта о новом обращении.
-* **`SendUserFeedbackCopy`** (Job + Mailable): копия обращения пользователю, либо (предпочтительный вариант по ТЗ) **`SendAutoReplyMail`** — автоматически сгенерированный ответ на языке пользователя (использует `locale` из `AiResponseDTO`, если он проставлен).
-* **`FeedbackNotifier`**: тонкий координирующий сервис, вызываемый из `FeedbackService`, который ставит нужные Job'ы в очередь, не заставляя `FeedbackService` знать детали отправки писем.
+* потребуется минимальная очередь — делаем имитацию: синхронный драйвер, но так, чтобы через конфигурацию (`QUEUE_CONNECTION` в `.env`) можно было переключиться на другой адаптер очереди, напр. `database`-драйвер очереди Laravel.
+* Шаблонизация писем — без Blade и без HTML: письма чисто текстовые, тело собирается напрямую в `Mailable` (PHP-строка/heredoc, `Mail::raw()`-подход), без отдельного шаблонизатора — это самый простой вариант, соответствующий требованию.
+* На каждое валидное обращение отправляется **ровно одно** письмо, на два адреса — владельцу (`To`) и пользователю (`Cc`). Отдельного письма пользователю (`UserAutoReplyMail` из `D-8.2`) больше нет — оно избыточно дублировало то, что уже делает `Cc`.
+* **`App\Mail\OwnerFeedbackMail`** (Job + Mailable): единственное письмо-уведомление о новом обращении. Строится из уже провалидированной модели `Feedback`. `To`: `SITE_OWNER_EMAIL`, `Cc`: `$feedback->email` (это и есть "копия письма пользователю" из ТЗ — см. `directives/summary-0.md`):
+  * тема: `Запрос #<id>` (`id` — см. §2.3);
+  * тело: `Ваш запрос #<id> получен и принят в работу.` → пустая строка → `Сообщение:` → пустая строка → ровно `$feedback->comment`, как он пришёл → `<подпись>` (`MAIL_SIGNATURE`).
+* **`FeedbackNotifier`**: тонкий координирующий сервис, вызываемый из `FeedbackService`, который ставит нужный Job в очередь, не заставляя `FeedbackService` знать детали отправки писем.
 
 ### 2.6. Middleware и сквозная функциональность
 * **Rate limiting**: защита `POST /api/v1/contact` от спама. Базовый вариант — Laravel-овский `throttle` middleware с файловым/кэш-драйвером лимитера; при необходимости кастомизации — отдельный **`FeedbackRateLimiter`** (именованный лимитер через `RateLimiter::for()`), настраиваемый через `.env`.
-* **`RequestLoggingMiddleware`**: логирует все входящие запросы (метод, путь, IP, статус ответа) в отдельный файловый канал логов (`Monolog`), не зависящий от бизнес-лога обращений.
-* **CORS**: используется штатный `HandleCors` middleware Laravel + `config/cors.php` (API же — CORS обязателен).
+* **CORS**: используется штатный `HandleCors` middleware Laravel + `config/cors.php`.
 * **Force JSON**: middleware/трейт, гарантирующий, что API всегда отвечает `application/json` (в т.ч. на ошибки валидации/сервера).
-* **Глобальный обработчик ошибок**: настраивается в `bootstrap/app.php` (`->withExceptions()`, Laravel 13) — приводит любые исключения (валидация, AI-сбои, прочие) к единому JSON-формату ошибки с корректным HTTP-статусом.
+* **Глобальный обработчик ошибок**: настраивается в `bootstrap/app.php` (`->withExceptions()`, Laravel 13) — приводит любые исключения (валидация, AI-сбои, прочие) к единому JSON-формату ошибки с корректным HTTP-статусом. Сам факт ошибки пишется в стандартный лог (`storage/logs/laravel.log`, канал по умолчанию) — отдельно от `feedback_storage`.
 
 ### 2.7. Providers / DI
 * **`FeedbackServiceProvider`** (или расширение `AppServiceProvider`): связывает `FeedbackRepositoryInterface` → `FeedbackRepository` (v1, лог-based), регистрирует конфигурацию HTTP-клиента для `AiGateway` (базовый URL, таймаут, ключ — из `.env`/`config/services.php`).
@@ -69,13 +73,24 @@
 
 ## 5. Инфраструктура (обязательные требования ТЗ, детальная проработка — позже)
 Ниже перечислены только соответствующие юниты/точки расширения — их полная реализация в объём текущей итерации не входит:
-* Переменные окружения (`.env`): `AI_GATEWAY_URL`, `AI_GATEWAY_TIMEOUT`, `SITE_OWNER_EMAIL`, `SITE_OWNER_LOCALE`, параметры rate limiting.
-* Логирование в файл: отдельные каналы `Monolog` — для обращений (`FeedbackRepository` v1) и для запросов (`RequestLoggingMiddleware`).
+* Переменные окружения (`.env`): `AI_GATEWAY_URL`, `AI_GATEWAY_TIMEOUT`, `SITE_OWNER_EMAIL`, `SITE_OWNER_LOCALE`, `MAIL_SIGNATURE` (подпись в письмах-уведомлениях), параметры rate limiting.
+* Логирование в файл: один канал `Monolog` `feedback_storage` / `storage/logs/feedback.log` — валидные обращения (`FeedbackRepository` v1, имитация БД). Невалидные запросы отдельно не логируются (нечего сохранять); непредвиденные (неконтролируемые) ошибки — забота глобального обработчика ошибок, а не этого канала.
 * Swagger/OpenAPI документация: аннотации на контроллерах либо отдельный `openapi.yaml`, генерируемый пакетом типа `l5-swagger`.
 
 ## 6. Маршрутизация — сводная таблица
 | Маршрут | Контроллер | Ключевые юниты |
 |---|---|---|
-| `POST /api/v1/contact` | `FeedbackController` | `FeedbackRequest`, `FeedbackService`, `AiHandler`, `AiGateway`, `AiRequestDTO`/`AiResponseDTO`, `FeedbackRepositoryInterface`/`FeedbackRepository`, `FeedbackNotifier`, rate limiting, `RequestLoggingMiddleware` |
-| `GET /api/v1/health` | `HealthController` | заглушка, без версии `v1` в пути |
-| `GET /api/v1/metrics` | `MetricsController` | заглушка, без версии `v1` в пути |
+| `POST /api/v1/contact` | `FeedbackController` | `FeedbackRequest`, `FeedbackService`, `AiHandler`, `AiGateway`, `AiRequestDTO`/`AiResponseDTO`, `FeedbackRepositoryInterface`/`FeedbackRepository`, `FeedbackNotifier`, rate limiting |
+| `GET /api/v1/health` | `HealthController` | заглушка |
+| `GET /api/v1/metrics` | `MetricsController` | заглушка |
+
+## 7. Обработка ошибок — сводная таблица
+Единый источник правды по ошибкам `POST /api/v1/contact` — в `PRODUCT.md` соответствующие AC ссылаются сюда, без дублирования деталей.
+
+| Ситуация | Источник | HTTP-статус | Логируется? |
+|---|---|---|---|
+| Отсутствует обязательное поле (`name`/`phone`/`email`/`comment`) | `FeedbackRequest` (Laravel `ValidationException`) | 422 | нет |
+| Некорректный формат email | `FeedbackRequest` (Laravel `ValidationException`) | 422 | нет |
+| Комментарий превышает максимальную длину («простыня») | `FeedbackRequest` (Laravel `ValidationException`) | 422 | нет |
+| Превышен лимит запросов (rate limiting) | `throttle` / `FeedbackRateLimiter` | 429 | нет |
+| Любая непредвиденная (необработанная) ошибка | Глобальный обработчик ошибок (`bootstrap/app.php` → `withExceptions()`) | 500 | да, `storage/logs/laravel.log` |
