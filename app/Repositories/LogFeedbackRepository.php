@@ -9,6 +9,6 @@ class LogFeedbackRepository implements FeedbackRepositoryInterface
 {
     public function save(Feedback $feedback): void
     {
-        Log::channel('single')->info('New feedback received', $feedback->toArray());
+        Log::channel('feedback_storage')->info('New feedback received', $feedback->toArray());
     }
 }

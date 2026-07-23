@@ -5,7 +5,7 @@
 ## Общее
 * AI-функция: анализ/извлечение структурированных данных из текста обращения (`$comment`) через внешний AI-провайдер.
 * Согласно ТЗ провайдер может быть OpenAI, Anthropic или другой — поэтому протокол общения с провайдером закладывается **swappable** (через интерфейс), хотя реально используется всегда только один провайдер за раз (не строим мультипровайдерную систему, только оставляем точку замены).
-* Текущая реализация — заглушка (см. `AiProcessingService`, ниже).
+* Реализовано и проверено на реальном AI-провайдере (см. раздел «Код» ниже).
 
 ## Юниты
 * **`AiHandler`** (в коде — `App\Services\AiProcessingService`, переименован из `AiAnalysisService`): orchestrator — собирает запрос, вызывает `AiGatewayInterface`, реализует graceful fallback (если шлюз недоступен/вернул ошибку/невалидный JSON/таймаут — анализ пропускается, ошибка логируется, а не пробрасывается наверх).
@@ -58,13 +58,13 @@
 
 
 ## Fallback
-Недоступность AI Gateway, ошибка ответа, невалидный JSON или истёкший таймаут → извлечение пропускается целиком, ошибка логируется (не пробрасывается наверх), основной сценарий (сохранение обращения, отправка письма) продолжается без AI-данных — как и раньше, до этой доработки.
+Недоступность AI Gateway, ошибка ответа, невалидный JSON или истёкший таймаут → извлечение пропускается целиком, ошибка логируется (не пробрасывается наверх), основной сценарий (сохранение обращения, отправка письма) продолжается без AI-данных. Проверено вживую (не только в моках): реальный таймаут шлюза на одном из тестовых запросов сработал ровно так, как здесь описано.
 
 ## Переименование
-`AiAnalysisService` → `AiProcessingService` — в коде **не применено**, ждёт утверждения этого файла (по аналогии с `SPECS-Mail.md`).
+`AiAnalysisService` → `AiProcessingService` — **применено** в коде (файл `app/Services/AiAnalysisService.php` удалён).
 
 ## Код
-Не реализовано (см. `directives/D-101.md`; текущий `AiAnalysisService::analyze()` — примитивная заглушка `"AI DONE\n" . $text`). Реализация по этой финальной схеме — после утверждения `SPECS-AI.md`.
+Реализовано по этой схеме: `AiRequestDTO`/`AiResponseDTO`, `AiGatewayInterface`/`OpenAiGateway` (OpenAI Chat Completions), `AiProcessingService` (оркестрация + graceful fallback), `FeedbackInsight`/`FeedbackInsightRepositoryInterface`/`LogFeedbackInsightRepository`, промпт-файл `resources/ai-prompts/feedback-extraction.txt`, конфигурация (`config/services.php`, `config/logging.php`), DI-биндинги (`AppServiceProvider`, `RepositoryServiceProvider`). `FeedbackProcessingService`/`Feedback` (модель) дополнены полем `id` и вызовом `AiProcessingService` — это уже относится к Feedback-слою, не к Mail, поэтому не гейтилось утверждением `SPECS-Mail.md`.
 
 ## Тесты
 См. `TESTING.md` §3.6–3.8 — `AiProcessingServiceTest`, `OpenAiGatewayTest`, `LogFeedbackInsightRepositoryTest`.

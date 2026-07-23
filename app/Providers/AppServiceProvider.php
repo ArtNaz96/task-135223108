@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\AI\AiGatewayInterface;
+use App\Services\AI\OpenAiGateway;
+use App\Services\AiProcessingService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -11,7 +14,18 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->bind(AiGatewayInterface::class, function () {
+            return new OpenAiGateway(
+                baseUrl: (string) config('services.ai_gateway.url'),
+                apiKey: (string) config('services.ai_gateway.api_key'),
+                model: (string) config('services.ai_gateway.model'),
+                timeout: (int) config('services.ai_gateway.timeout'),
+            );
+        });
+
+        $this->app->when(AiProcessingService::class)
+            ->needs('$systemPrompt')
+            ->give(fn () => file_get_contents(resource_path('ai-prompts/feedback-extraction.txt')));
     }
 
     public function boot(): void

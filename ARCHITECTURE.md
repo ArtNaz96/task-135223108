@@ -27,7 +27,7 @@
 * **`MetricsController`**: Точка входа для `GET /api/v1/metrics`. В текущей итерации — заглушка, возвращающая `501 Not Implemented`.
 
 ### 2.2. Бизнес-логика
-* **`FeedbackService`**: Основной сервис для координации бизнес-правил, обработки обращений и взаимодействия с репозиторием. Из `FeedbackRequest` собирает `Feedback` (POPO), вызывает `AiHandler`, передаёт результат в `FeedbackRepository` и инициирует отправку нотификаций.
+* **`FeedbackService`**: Основной сервис для координации бизнес-правил, обработки обращений и взаимодействия с репозиторием. Из `FeedbackRequest` собирает `Feedback` (POPO), передаёт его в `FeedbackRepository` для сохранения — и только **после** этого вызывает `AiHandler` (порядок важен, см. `SPECS-AI.md`: `AiHandler` не изменяет `Feedback`, а сохраняет результат отдельно), инициирует отправку нотификаций.
 * **AI-анализ** (`AiHandler`/`AiGateway`/DTO) — см. **`SPECS-AI.md`**, вынесено в отдельный файл.
 
 ### 2.3. Модель данных
@@ -73,7 +73,7 @@
 ## 6. Маршрутизация — сводная таблица
 | Маршрут | Контроллер | Ключевые юниты |
 |---|---|---|
-| `POST /api/v1/contact` | `FeedbackController` | `FeedbackRequest`, `FeedbackService`, `AiHandler`, `AiGateway`, `AiRequestDTO`/`AiResponseDTO`, `FeedbackRepositoryInterface`/`FeedbackRepository`, `FeedbackNotifier`, rate limiting |
+| `POST /api/v1/contact` | `FeedbackController` | `FeedbackRequest`, `FeedbackService`, `FeedbackRepositoryInterface`/`FeedbackRepository`, `AiHandler`, `AiGateway`, `AiRequestDTO`/`AiResponseDTO`, `FeedbackInsightRepositoryInterface`/`LogFeedbackInsightRepository`, `FeedbackNotifier`, rate limiting |
 | `GET /api/v1/health` | `HealthController` | заглушка |
 | `GET /api/v1/metrics` | `MetricsController` | заглушка |
 

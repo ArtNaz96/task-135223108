@@ -1,4 +1,6 @@
 /directives
+*.bat
+
 *.log
 .DS_Store
 .env

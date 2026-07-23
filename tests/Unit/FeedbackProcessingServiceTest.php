@@ -2,15 +2,15 @@
 
 namespace Tests\Unit;
 
-use App\DTO\Feedback;
+use App\Models\Feedback;
 use App\Repositories\FeedbackRepositoryInterface;
-use App\Services\AiAnalysisService;
+use App\Services\AiProcessingService;
 use App\Services\FeedbackProcessingService;
 use Tests\TestCase;
 
 class FeedbackProcessingServiceTest extends TestCase
 {
-    public function test_process_analyzes_comment_and_saves_feedback(): void
+    public function test_process_saves_feedback_with_generated_id_and_unmodified_comment(): void
     {
         $inputData = [
             'name' => 'Jane Doe',
@@ -19,12 +19,6 @@ class FeedbackProcessingServiceTest extends TestCase
             'comment' => 'Need help with project',
         ];
 
-        $aiServiceMock = $this->createMock(AiAnalysisService::class);
-        $aiServiceMock->expects($this->once())
-            ->method('analyze')
-            ->with('Need help with project')
-            ->willReturn("AI DONE\nNeed help with project");
-
         $repositoryMock = $this->createMock(FeedbackRepositoryInterface::class);
         $repositoryMock->expects($this->once())
             ->method('save')
@@ -32,14 +26,48 @@ class FeedbackProcessingServiceTest extends TestCase
                 return $feedback->name === 'Jane Doe'
                     && $feedback->phone === '+9876543210'
                     && $feedback->email === 'jane@example.com'
-                    && $feedback->comment === "AI DONE\nNeed help with project";
+                    && $feedback->comment === 'Need help with project'
+                    && preg_match('/^\d{14}-\d{6}$/', $feedback->id) === 1;
             }));
 
-        $service = new FeedbackProcessingService($repositoryMock, $aiServiceMock);
+        $aiProcessingServiceMock = $this->createMock(AiProcessingService::class);
+        $aiProcessingServiceMock->expects($this->once())
+            ->method('process')
+            ->with($this->isInstanceOf(Feedback::class));
+
+        $service = new FeedbackProcessingService($repositoryMock, $aiProcessingServiceMock);
         $result = $service->process($inputData);
 
         $this->assertInstanceOf(Feedback::class, $result);
         $this->assertEquals('Jane Doe', $result->name);
-        $this->assertEquals("AI DONE\nNeed help with project", $result->comment);
+        $this->assertEquals('Need help with project', $result->comment);
+        $this->assertMatchesRegularExpression('/^\d{14}-\d{6}$/', $result->id);
+    }
+
+    public function test_process_saves_feedback_before_calling_ai_processing(): void
+    {
+        $inputData = [
+            'name' => 'John Doe',
+            'phone' => '+1234567890',
+            'email' => 'john@example.com',
+            'comment' => 'Order status',
+        ];
+
+        $callOrder = [];
+
+        $repositoryMock = $this->createMock(FeedbackRepositoryInterface::class);
+        $repositoryMock->method('save')->willReturnCallback(function () use (&$callOrder) {
+            $callOrder[] = 'repository.save';
+        });
+
+        $aiProcessingServiceMock = $this->createMock(AiProcessingService::class);
+        $aiProcessingServiceMock->method('process')->willReturnCallback(function () use (&$callOrder) {
+            $callOrder[] = 'ai.process';
+        });
+
+        $service = new FeedbackProcessingService($repositoryMock, $aiProcessingServiceMock);
+        $service->process($inputData);
+
+        $this->assertSame(['repository.save', 'ai.process'], $callOrder);
     }
 }
