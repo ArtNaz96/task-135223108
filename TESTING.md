@@ -39,21 +39,28 @@
 
 ## 3. Unit-тесты
 
-### 3.1. `tests/Unit/Services/FeedbackProcessingServiceTest.php`
+### 3.1. `tests/Unit/Support/InputSanitizerTest.php`
+* `it_strips_html_tags` — `<script>alert(1)</script>текст` → `текст` (без остатков тегов/сущностей).
+* `it_removes_control_characters_except_newline_tab_cr` — null-байты и прочие управляющие символы (`\x00`, `\x1F`, `\x7F`) удаляются, а `\n`/`\r`/`\t` остаются.
+* `it_preserves_line_breaks_in_multiline_comment` — многострочный текст сохраняет переносы строк (не схлопывается в одну строку).
+* `it_collapses_only_horizontal_whitespace` — повторяющиеся пробелы/табы в одной строке схлопываются в один пробел, переносы строк не трогаются.
+* `it_trims_leading_and_trailing_whitespace_per_line_and_overall` — пробелы по краям каждой строки и всего значения обрезаются.
+
+### 3.2. `tests/Unit/Services/FeedbackProcessingServiceTest.php`
 * `it_builds_feedback_dto_from_input_array` — из массива данных собирается корректный `Feedback`.
 * `it_delegates_comment_to_ai_service` — AI-сервис вызывается с исходным текстом комментария (мок).
 * `it_saves_feedback_via_repository` — репозиторий вызывается ровно один раз с собранным `Feedback` (мок `FeedbackRepositoryInterface`).
 * `it_generates_id_matching_expected_format` — `id` соответствует `^\d{14}-\d{6}$` (`YYYYMMDDHHMMSS-<6 цифр>`), см. `ARCHITECTURE.md` §2.3.
 
-### 3.2. `tests/Unit/Services/AiAnalysisServiceTest.php` *(или `AiHandlerTest`/`AiGatewayTest`, когда появятся)*
+### 3.3. `tests/Unit/Services/AiAnalysisServiceTest.php` *(или `AiHandlerTest`/`AiGatewayTest`, когда появятся)*
 * `it_prefixes_text_with_ai_done_marker` — заглушка возвращает `"AI DONE\n" . $text`.
 * `it_does_not_mutate_original_comment_used_elsewhere` — убедиться, что обработанный AI текст не подменяет оригинал там, где требуется «ровно как пришло» (тело письма, §2.5 `ARCHITECTURE.md`).
 
-### 3.3. `tests/Unit/Repositories/LogFeedbackRepositoryTest.php`
+### 3.4. `tests/Unit/Repositories/LogFeedbackRepositoryTest.php`
 * `it_writes_to_feedback_storage_channel` — `save()` пишет именно в канал `feedback_storage`, не в `single`/`stack` по умолчанию.
 * `it_includes_all_feedback_attributes_in_log_entry` — в записи присутствуют все поля `Feedback` (включая `id`).
 
-### 3.4. `tests/Unit/Mail/OwnerFeedbackMailTest.php`
+### 3.5. `tests/Unit/Mail/OwnerFeedbackMailTest.php`
 * `it_has_subject_with_request_id` — тема письма `Запрос #<id>`.
 * `it_renders_body_with_exact_template` — тело: `Ваш запрос #<id> получен и принят в работу.` → пустая строка → `Сообщение:` → пустая строка → `$feedback->comment` без изменений → `<подпись>` (`MAIL_SIGNATURE`).
 * `it_is_addressed_to_owner_and_cc_to_user` — `to()` = `SITE_OWNER_EMAIL`, `cc()` = `$feedback->email`.
