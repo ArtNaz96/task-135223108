@@ -67,6 +67,24 @@
 * `it_is_addressed_to_owner_and_cc_to_user` — `to()` = `SITE_OWNER_EMAIL`, `cc()` = `$feedback->email`.
 * `it_body_contains_no_html_tags` — несмотря на движок Blade, итоговое тело не содержит HTML-тегов (чистый текст).
 
+### 3.6. `tests/Unit/Services/AiProcessingServiceTest.php`
+См. `SPECS-AI.md` (юниты, контракт, судьба извлечённого JSON).
+* `it_sends_comment_and_static_prompt_to_gateway` — вызывает `AiGatewayInterface` с текстом `$comment` и содержимым `resources/ai-prompts/feedback-extraction.txt` (мок интерфейса).
+* `it_saves_feedback_insight_on_successful_extraction` — при успешном ответе шлюза создаёт `FeedbackInsight` (тот же `id`, что у `Feedback`) и сохраняет через `FeedbackInsightRepositoryInterface` (мок).
+* `it_does_not_save_feedback_insight_on_gateway_failure` — при ошибке/исключении шлюза `FeedbackInsightRepositoryInterface::save()` не вызывается вообще.
+* `it_falls_back_gracefully_without_propagating_exception` — исключение из `AiGatewayInterface` не пробрасывается наверх, ошибка логируется.
+
+### 3.7. `tests/Unit/Services/AI/OpenAiGatewayTest.php`
+* `it_calls_chat_completions_endpoint` — `POST {AI_GATEWAY_URL}/chat/completions` (HTTP-мок, `Http::fake()`).
+* `it_sends_expected_request_body` — тело запроса содержит `model` (= `AI_GATEWAY_MODEL`), `temperature: 0`, `response_format: {"type": "json_object"}`, `messages` (system + user).
+* `it_sends_authorization_header_with_api_key` — заголовок `Authorization: Bearer {AI_GATEWAY_API_KEY}`.
+* `it_parses_json_from_response_content` — `choices[0].message.content` парсится как JSON → `AiResponseDTO`.
+* `it_throws_on_invalid_json_response` — невалидный JSON в `content` → исключение (ловится уже в `AiProcessingService`, см. §3.6).
+
+### 3.8. `tests/Unit/Repositories/LogFeedbackInsightRepositoryTest.php`
+* `it_writes_to_feedback_insight_storage_channel` — `save()` пишет именно в канал `feedback_insight_storage`, не в `feedback_storage`/`single`/`stack`.
+* `it_includes_id_and_payload_in_log_entry` — в записи присутствуют `id` (совпадает с `Feedback::$id`) и `payload` (весь JSON от AI).
+
 ## 4. Инструменты/подходы
 
 * `Mail::fake()` + `Mail::assertSent(...)` — для писем, без реальной отправки.

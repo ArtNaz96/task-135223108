@@ -15,7 +15,7 @@
 контроллеры, `FormRequest`-валидация, сервисы (`FeedbackService`, `AiHandler`), DTO, `FeedbackRepository` (v1, файловая имитация), нотификации (`OwnerFeedbackMail`), middleware (rate limiting, CORS, глобальный обработчик ошибок), заглушки `GET /api/v1/health` и `GET /api/v1/metrics`.
 
 ## Шаг 3. Реализация AI-функции (отдельный подпроект)
-Сейчас `AiGateway` — заглушка (`AI DONE`). На этом шаге — полноценная реализация: реальное обращение к `AI_GATEWAY_URL`, обработка ответа через `AiResponseDTO`.
+Сейчас `AiProcessingService` (бывш. `AiAnalysisService`) — заглушка (`AI DONE`). На этом шаге — полноценная реализация по `SPECS-AI.md`: `AiGatewayInterface`/`OpenAiGateway`, реальное обращение к `AI_GATEWAY_URL`, обработка ответа через `AiResponseDTO`.
 
 ## Шаг 4. Инфраструктурная доработка
 * Конкретные значения переменных окружения (`.env`).
