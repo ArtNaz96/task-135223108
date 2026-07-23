@@ -11,7 +11,8 @@ class LogFeedbackRepositoryTest extends TestCase
 {
     public function test_save_logs_feedback_data(): void
     {
-        Log::fake();
+        // Создаем шпион для фасада Log
+        Log::spy();
 
         $repository = new LogFeedbackRepository();
         $feedback = new Feedback(
@@ -23,9 +24,9 @@ class LogFeedbackRepositoryTest extends TestCase
 
         $repository->save($feedback);
 
-        Log::channel('single')->assertLogged('info', function (string $message, array $context) use ($feedback) {
-            return $message === 'New feedback received'
-                && $context === $feedback->toArray();
-        });
+        // Проверяем, что Log::channel('single')->info(...) был вызван с нужными аргументами
+        Log::channel('single')->shouldHaveReceived('info')
+            ->once()
+            ->with('New feedback received', $feedback->toArray());
     }
 }
