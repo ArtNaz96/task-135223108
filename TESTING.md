@@ -60,10 +60,12 @@
 * `it_writes_to_feedback_storage_channel` — `save()` пишет именно в канал `feedback_storage`, не в `single`/`stack` по умолчанию.
 * `it_includes_all_feedback_attributes_in_log_entry` — в записи присутствуют все поля `Feedback` (включая `id`).
 
-### 3.5. `tests/Unit/Mail/OwnerFeedbackMailTest.php`
-* `it_has_subject_with_request_id` — тема письма `Запрос #<id>`.
-* `it_renders_body_with_exact_template` — тело: `Ваш запрос #<id> получен и принят в работу.` → пустая строка → `Сообщение:` → пустая строка → `$feedback->comment` без изменений → `<подпись>` (`MAIL_SIGNATURE`).
+### 3.5. `tests/Unit/Mail/NewFeedbackMailTest.php`
+Содержание письма/шаблонизация — см. `SPECS-Mail.md`.
+* `it_has_subject_with_request_id` — тема письма (рендер `subject.blade.php`) — `Запрос #<id>`.
+* `it_renders_body_with_exact_template` — тело (рендер `body.blade.php`): `Ваш запрос #<id> получен и принят в работу.` → пустая строка → `Сообщение:` → пустая строка → `$feedback->comment` без изменений → подпись (статический текст шаблона).
 * `it_is_addressed_to_owner_and_cc_to_user` — `to()` = `SITE_OWNER_EMAIL`, `cc()` = `$feedback->email`.
+* `it_body_contains_no_html_tags` — несмотря на движок Blade, итоговое тело не содержит HTML-тегов (чистый текст).
 
 ## 4. Инструменты/подходы
 
