@@ -4,26 +4,32 @@ namespace App\Support;
 
 class InputSanitizer
 {
-    /**
-     * Санитизация "параноидальная", но без искажения смысла:
-     * - убирает управляющие/невидимые символы (кроме \n \r \t — иначе ломаем многострочный текст),
-     * - убирает HTML/скрипт-теги целиком (а не экранирует — чтобы в письме/логе не было "&lt;script&gt;"),
-     * - схлопывает только горизонтальные пробелы, переносы строк не трогает.
-     */
-    public static function sanitize(string $value): string
+    public static function sanitize(string $input): string
     {
-        // null-байт и управляющие символы, кроме \t(\x09) \n(\x0A) \r(\x0D)
-        $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value);
+        // 1. Strip HTML and PHP tags
+        $clean = strip_tags($input);
 
-        // HTML/script-теги — вырезаем целиком (XSS), не оставляя мусора из сущностей
-        $value = strip_tags($value);
+        // 2. Remove control characters except \n (0x0A), \r (0x0D), and \t (0x09)
+        $clean = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $clean);
 
-        // горизонтальные пробелы/табы схлопываем, переносы строк оставляем как есть
-        $value = preg_replace('/[ \t]+/u', ' ', $value);
+        // 3. Process line by line to collapse horizontal spaces and trim edges
+        $lines = explode("\n", $clean);
+        $processedLines = array_map(function ($line) {
+            // Remove \r if present at line end before processing
+            $hasCr = str_ends_with($line, "\r");
+            if ($hasCr) {
+                $line = substr($line, 0, -1);
+            }
 
-        // пробелы по краям каждой строки, не трогая сами переносы
-        $value = implode("\n", array_map('trim', explode("\n", $value)));
+            // Collapse multiple horizontal spaces/tabs
+            $line = preg_replace('/[ \t]+/', ' ', $line);
+            $line = trim($line, " \t");
 
-        return trim($value);
+            return $hasCr ? $line . "\r" : $line;
+        }, $lines);
+
+        $result = implode("\n", $processedLines);
+
+        return trim($result, " \t\n\r");
     }
 }
