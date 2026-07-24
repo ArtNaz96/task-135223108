@@ -23,28 +23,28 @@
 | `test_ai_gateway_failure_does_not_break_the_request` | `tests/Feature/Api/V1/ContactAiExtractionTest.php` ✅ | AI-шлюз бросает исключение → запрос всё равно 201, `FeedbackInsightRepositoryInterface::save()` не вызван | AC 3.2 |
 | `test_successful_request_sends_two_separate_mails_to_owner_and_user` | `tests/Feature/Api/V1/ContactMailTest.php` ✅ | Валидный запрос → 201, ровно два письма в очереди — одно с `to` = `SITE_OWNER_EMAIL`, другое с `to` = `$feedback->email`, без `cc` | AC 4.1, AC 4.2 |
 | `test_validation_failure_does_not_send_mail` | `tests/Feature/Api/V1/ContactMailTest.php` ✅ | Невалидный запрос → 422, писем не отправлено | AC 4.1/4.2 (негатив) |
-| `it_accepts_valid_payload` | — | Валидные `name`/`phone`/`email`/`comment` → 201, тело содержит `message` и `data` | AC 1.1, AC 1.2 |
-| `it_rejects_missing_required_field` | — | По очереди отсутствует каждое обязательное поле → 422 | AC 2.1, §7 |
-| `it_rejects_invalid_email_format` | — | `email` некорректного формата → 422 | AC 2.2, §7 |
-| `it_rejects_comment_longer_than_2000_chars` | — | `comment` > `FEEDBACK_COMMENT_MAX_LENGTH` («простыня») → 422 | AC 2.3, §7 |
-| `it_returns_500_without_leaking_internals_on_unexpected_error` | — | Смоделированное исключение → 500, JSON без стектрейса, запись в `storage/logs/laravel.log` | AC 2.5, §7 |
-| `it_writes_valid_feedback_to_feedback_storage_channel` | — | Валидный запрос → канал `feedback_storage` получает запись | AC 5.1 |
-| `it_does_not_write_invalid_requests_to_feedback_storage_channel` | — | Невалидный запрос → канал `feedback_storage` не тронут | AC 5.1 (негатив) |
+| `test_it_accepts_valid_payload` | `tests/Feature/Api/V1/ContactValidationTest.php` ✅ | Валидные `name`/`phone`/`email`/`comment` → 201, тело содержит `message` и `data` | AC 1.1, AC 1.2 |
+| `test_it_rejects_missing_required_field` | `tests/Feature/Api/V1/ContactValidationTest.php` ✅ | По очереди отсутствует каждое обязательное поле → 422 | AC 2.1, §7 |
+| `test_it_rejects_invalid_email_format` | `tests/Feature/Api/V1/ContactValidationTest.php` ✅ | `email` некорректного формата → 422 | AC 2.2, §7 |
+| `test_it_rejects_comment_longer_than_2000_chars` | `tests/Feature/Api/V1/ContactValidationTest.php` ✅ | `comment` > `FEEDBACK_COMMENT_MAX_LENGTH` («простыня») → 422 | AC 2.3, §7 |
+| `test_it_returns_500_without_leaking_internals_on_unexpected_error` | `tests/Feature/Api/V1/ContactErrorHandlingTest.php` ✅ | Смоделированное исключение → 500, JSON без стектрейса | AC 2.5, §7 |
+| `test_it_writes_valid_feedback_to_feedback_storage_channel` | `tests/Feature/Api/V1/ContactStorageTest.php` ✅ | Валидный запрос → канал `feedback_storage` получает запись | AC 5.1 |
+| `test_it_does_not_write_invalid_requests_to_feedback_storage_channel` | `tests/Feature/Api/V1/ContactStorageTest.php` ✅ | Невалидный запрос → канал `feedback_storage` не тронут | AC 5.1 (негатив) |
 
 ### 2.2. `GET /api/v1/health`
-* `it_returns_ok_status` — 200, JSON `{"status": "ok"}`.
+* `test_it_returns_ok_health_status` — `tests/Feature/Api/V1/HealthAndMetricsTest.php` ✅ — 200, JSON `{"status": "ok"}`.
 
 ### 2.3. `GET /api/v1/metrics`
-* `it_returns_not_implemented` — `501 Not Implemented` (см. `ARCHITECTURE.md` §4).
+* `test_it_returns_not_implemented_for_metrics` — `tests/Feature/Api/V1/HealthAndMetricsTest.php` ✅ — `501 Not Implemented` (см. `ARCHITECTURE.md` §4).
 
 ## 3. Unit-тесты
 
-### 3.1. `tests/Unit/Support/InputSanitizerTest.php`
-* `it_strips_html_tags` — `<script>alert(1)</script>текст` → `текст`.
-* `it_removes_control_characters_except_newline_tab_cr` — `\x00`/`\x1F`/`\x7F` удаляются, `\n`/`\r`/`\t` остаются.
-* `it_preserves_line_breaks_in_multiline_comment` — переносы строк не схлопываются.
-* `it_collapses_only_horizontal_whitespace` — повторяющиеся пробелы/табы схлопываются, переносы — нет.
-* `it_trims_leading_and_trailing_whitespace_per_line_and_overall`.
+### 3.1. `tests/Unit/InputSanitizerTest.php` ✅
+* `test_it_strips_html_tags` — `<script>alert(1)</script>текст` → `текст`.
+* `test_it_removes_control_characters_except_newline_tab_cr` — `\x00`/`\x1F`/`\x7F` удаляются, `\n`/`\r`/`\t` остаются.
+* `test_it_preserves_line_breaks_in_multiline_comment` — переносы строк (в т.ч. `\r\n`) не схлопываются.
+* `test_it_collapses_only_horizontal_whitespace` — повторяющиеся пробелы/табы схлопываются, переносы — нет.
+* `test_it_trims_leading_and_trailing_whitespace_per_line_and_overall`.
 
 ### 3.2. `tests/Unit/FeedbackServiceTest.php` ✅ *(переименован из `FeedbackProcessingServiceTest.php`)*
 * `test_process_saves_feedback_with_generated_id_and_unmodified_comment` — `id` формата `^\d{14}-\d{6}$`, `comment` не изменяется (AI не мутирует текст — см. §3.5).
@@ -63,7 +63,7 @@
 * `test_keeps_false_and_zero` — `false`/`0` не считаются пустыми значениями.
 * `test_removes_nested_array_that_becomes_empty` — ветка, полностью опустевшая после очистки, тоже убирается.
 * `test_reindexes_list_after_removing_empty_items` — списки (не ассоц. массивы) переиндексируются после удаления пустых элементов.
-* `test_prunes_real_ai_extraction_shaped_payload` — на реальном примере из лога (`order`/`pet`/`products` с одними `null` → убираются целиком, остаётся только содержательный `intent`).
+* `test_prunes_real_ai_extraction_shaped_payload` — на реальном примере из лога (`customer`/`products` с одними `null`/`[]` → убираются целиком, остаётся только содержательный `intent`).
 
 ### 3.4. `tests/Unit/LogFeedbackRepositoryTest.php` ✅
 * `test_save_logs_feedback_data_to_feedback_storage_channel` — пишет в канал `feedback_storage` (не `single`).

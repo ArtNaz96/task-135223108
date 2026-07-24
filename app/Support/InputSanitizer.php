@@ -21,8 +21,8 @@ class InputSanitizer
         // горизонтальные пробелы/табы схлопываем, переносы строк оставляем как есть
         $value = preg_replace('/[ \t]+/u', ' ', $value);
 
-        // пробелы по краям каждой строки, не трогая сами переносы
-        $value = implode("\n", array_map('trim', explode("\n", $value)));
+        // пробелы/табы по краям каждой строки — но не \r (иначе "\r\n" тихо схлопнется до "\n")
+        $value = implode("\n", array_map(static fn (string $line): string => trim($line, " \t"), explode("\n", $value)));
 
         return trim($value);
     }
