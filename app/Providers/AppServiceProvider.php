@@ -31,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('contact-form', function (Request $request) {
-            $limit = (int) env('RATE_LIMIT_CONTACT_PER_MINUTE', 5);
+            $limit = (int) env('FEEDBACK_RATE_LIMIT_PER_MINUTE', 5);
             return Limit::perMinute($limit)->by($request->ip());
         });
     }

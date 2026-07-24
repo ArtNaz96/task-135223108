@@ -67,7 +67,7 @@
 
 ## 5. Инфраструктура (обязательные требования ТЗ, детальная проработка — позже)
 Ниже перечислены только соответствующие юниты/точки расширения — их полная реализация в объём текущей итерации не входит:
-* Переменные окружения (`.env`): `AI_GATEWAY_URL`, `AI_GATEWAY_TIMEOUT`, `AI_GATEWAY_MODEL`, `AI_GATEWAY_API_KEY` (см. `SPECS-AI.md`), `SITE_OWNER_EMAIL`, `RATE_LIMIT_CONTACT_PER_MINUTE`, `FEEDBACK_NAME_MAX_LENGTH`, `FEEDBACK_COMMENT_MAX_LENGTH`. (`MAIL_SIGNATURE` больше не используется — подпись теперь часть шаблона письма, см. `SPECS-Mail.md`.)
+* Переменные окружения (`.env`): `AI_GATEWAY_URL`, `AI_GATEWAY_TIMEOUT`, `AI_GATEWAY_MODEL`, `AI_GATEWAY_API_KEY` (см. `SPECS-AI.md`), `SITE_OWNER_EMAIL`, `FEEDBACK_RATE_LIMIT_PER_MINUTE`, `FEEDBACK_NAME_MAX_LENGTH`, `FEEDBACK_COMMENT_MAX_LENGTH`. (`MAIL_SIGNATURE` больше не используется — подпись теперь часть шаблона письма, см. `SPECS-Mail.md`.)
 * Логирование в файл: канал `Monolog` `feedback_storage` / `storage/logs/feedback.log` — валидные обращения (`FeedbackRepository` v1, имитация БД); отдельный канал `feedback_insight_storage` / `storage/logs/feedback-insight.log` — результаты AI-извлечения, только при успехе (см. `SPECS-AI.md`). Невалидные запросы не логируются (нечего сохранять); непредвиденные (неконтролируемые) ошибки — забота глобального обработчика ошибок, а не этих каналов.
 * Swagger/OpenAPI документация: аннотации на контроллерах либо отдельный `openapi.yaml`, генерируемый пакетом типа `l5-swagger`.
 
