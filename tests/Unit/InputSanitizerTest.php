@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Support;
+namespace Tests\Unit;
 
 use App\Support\InputSanitizer;
 use Tests\TestCase;

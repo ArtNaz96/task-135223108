@@ -22,6 +22,8 @@ paths:
       operationId: submitContactForm
       tags:
         - Feedback
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -46,6 +48,16 @@ paths:
                     example: "Feedback successfully received"
                   data:
                     $ref: '#/components/schemas/FeedbackResponse'
+        '401':
+          description: Отсутствующий или неверный токен авторизации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Unauthorized."
         '422':
           description: Ошибка валидации входных данных
           content:
@@ -107,6 +119,14 @@ paths:
                     example: "Not Implemented"
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Требуется для `POST /contact`. Значение — `API_ACCESS_TOKEN` из `.env`.
+        Заголовок: `Authorization: Bearer <token>`.
+
   schemas:
     FeedbackRequest:
       type: object
