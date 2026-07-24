@@ -1,0 +1,172 @@
+openapi: 3.0.3
+info:
+  title: Portfolio Backend API
+  description: |
+    REST API бэкенд-сервис для лендинг-презентации разработчика.
+    Поддерживает приём обратной связи, асинхронные уведомления, файловое хранилище (Monolog) и извлечение AI-инсайтов с поддержкой Graceful Fallback.
+  version: 1.0.0
+  contact:
+    name: Backend Developer
+    email: owner@example.com
+
+servers:
+  - url: http://127.0.0.1:8000/api/v1
+    description: Local Development Server
+
+paths:
+  /contact:
+    post:
+      summary: Отправка формы обратной связи
+      description: |
+        Принимает контактные данные и сообщение пользователя, выполняет их валидацию, очистку (sanitization), сохраняет в файловый лог (`storage/logs/feedback.log`), запускает отправку уведомлений и извлечение AI-инсайтов.
+      operationId: submitContactForm
+      tags:
+        - Feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+            example:
+              name: "Алексей Смирнов"
+              phone: "+79991234567"
+              email: "alexey@example.com"
+              comment: "Здравствуйте! Интересует стоимость и сроки разработки REST API на Laravel."
+      responses:
+        '201':
+          description: Сообщение успешно принято и сохранено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Feedback successfully received"
+                  data:
+                    $ref: '#/components/schemas/FeedbackResponse'
+        '422':
+          description: Ошибка валидации входных данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              example:
+                message: "The name field is required."
+                errors:
+                  name:
+                    - "The name field is required."
+        '429':
+          description: Превышен лимит запросов (Rate Limit)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Too Many Requests"
+
+  /health:
+    get:
+      summary: Проверка работоспособности сервиса
+      description: Возвращает текущий статус доступности приложения.
+      operationId: getHealthStatus
+      tags:
+        - System
+      responses:
+        '200':
+          description: Сервис работает исправно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+  /metrics:
+    get:
+      summary: Статистика и метрики обращений
+      description: Эндпоинт-заглушка для будущего сбора статистики.
+      operationId: getMetrics
+      tags:
+        - System
+      responses:
+        '501':
+          description: Функционал не реализован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Not Implemented"
+
+components:
+  schemas:
+    FeedbackRequest:
+      type: object
+      required:
+        - name
+        - phone
+        - email
+        - comment
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Имя пользователя
+          example: "Алексей Смирнов"
+        phone:
+          type: string
+          maxLength: 50
+          description: Телефонный номер пользователя
+          example: "+79991234567"
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Email пользователя
+          example: "alexey@example.com"
+        comment:
+          type: string
+          maxLength: 5000
+          description: Текст обращения / комментарий
+          example: "Здравствуйте! Интересует стоимость и сроки разработки REST API на Laravel."
+
+    FeedbackResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Уникальный идентификатор записи (YYYYMMDDHHMMSS-******)
+          example: "20260724120000-123456"
+        name:
+          type: string
+          example: "Алексей Смирнов"
+        phone:
+          type: string
+          example: "+79991234567"
+        email:
+          type: string
+          example: "alexey@example.com"
+        comment:
+          type: string
+          example: "Здравствуйте! Интересует стоимость и сроки разработки REST API на Laravel."
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "The name field is required."
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
