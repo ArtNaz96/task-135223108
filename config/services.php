@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'ai_gateway' => [
+        'url' => env('AI_GATEWAY_URL'),
+        'timeout' => env('AI_GATEWAY_TIMEOUT', 5),
+        'model' => env('AI_GATEWAY_MODEL'),
+        'api_key' => env('AI_GATEWAY_API_KEY'),
+    ],
+
+    'site_owner' => [
+        'email' => env('SITE_OWNER_EMAIL'),
+    ],
+
 ];

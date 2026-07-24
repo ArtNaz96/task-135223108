@@ -1,0 +1,85 @@
+<?php
+
+namespace Tests\Unit;
+
+use App\Models\Feedback;
+use App\Repositories\FeedbackRepositoryInterface;
+use App\Services\AiProcessingService;
+use App\Services\FeedbackNotifier;
+use App\Services\FeedbackService;
+use Tests\TestCase;
+
+class FeedbackServiceTest extends TestCase
+{
+    public function test_process_saves_feedback_with_generated_id_and_unmodified_comment(): void
+    {
+        $inputData = [
+            'name' => 'Jane Doe',
+            'phone' => '+9876543210',
+            'email' => 'jane@example.com',
+            'comment' => 'Need help with project',
+        ];
+
+        $repositoryMock = $this->createMock(FeedbackRepositoryInterface::class);
+        $repositoryMock->expects($this->once())
+            ->method('save')
+            ->with($this->callback(function (Feedback $feedback) {
+                return $feedback->name === 'Jane Doe'
+                    && $feedback->phone === '+9876543210'
+                    && $feedback->email === 'jane@example.com'
+                    && $feedback->comment === 'Need help with project'
+                    && preg_match('/^\d{14}-\d{6}$/', $feedback->id) === 1;
+            }));
+
+        $aiProcessingServiceMock = $this->createMock(AiProcessingService::class);
+        $aiProcessingServiceMock->expects($this->once())
+            ->method('process')
+            ->with($this->isInstanceOf(Feedback::class));
+
+        $notifierMock = $this->createMock(FeedbackNotifier::class);
+        $notifierMock->expects($this->once())
+            ->method('notify')
+            ->with($this->isInstanceOf(Feedback::class));
+
+        $service = new FeedbackService($repositoryMock, $aiProcessingServiceMock, $notifierMock);
+        $result = $service->process($inputData);
+
+        $this->assertInstanceOf(Feedback::class, $result);
+        $this->assertEquals('Jane Doe', $result->name);
+        $this->assertEquals('Need help with project', $result->comment);
+        $this->assertMatchesRegularExpression('/^\d{14}-\d{6}$/', $result->id);
+    }
+
+    public function test_process_calls_dependencies_in_correct_order(): void
+    {
+        $inputData = [
+            'name' => 'John Doe',
+            'phone' => '+1234567890',
+            'email' => 'john@example.com',
+            'comment' => 'Order status',
+        ];
+
+        $callOrder = [];
+
+        $repositoryMock = $this->createMock(FeedbackRepositoryInterface::class);
+        $repositoryMock->expects($this->once())->method('save')->willReturnCallback(function () use (&$callOrder) {
+            $callOrder[] = 'repository.save';
+        });
+
+        $aiProcessingServiceMock = $this->createMock(AiProcessingService::class);
+        $aiProcessingServiceMock->expects($this->once())->method('process')->willReturnCallback(function () use (&$callOrder) {
+            $callOrder[] = 'ai.process';
+        });
+
+        $notifierMock = $this->createMock(FeedbackNotifier::class);
+        $notifierMock->expects($this->once())->method('notify')->willReturnCallback(function () use (&$callOrder) {
+            $callOrder[] = 'notifier.notify';
+        });
+
+        $service = new FeedbackService($repositoryMock, $aiProcessingServiceMock, $notifierMock);
+        $service->process($inputData);
+
+        // Порядок важен: сохранение обращения ДО AI (см. SPECS-AI.md), уведомление — после.
+        $this->assertSame(['repository.save', 'ai.process', 'notifier.notify'], $callOrder);
+    }
+}

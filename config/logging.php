@@ -123,6 +123,27 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        'feedback_storage' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/feedback.log'),
+            'level' => 'info',
+            'replace_placeholders' => true,
+        ],
+
+        'feedback_insight_storage' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/feedback-insight.log'),
+            'level' => 'info',
+            'replace_placeholders' => true,
+        ],
+
+        'mail' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/mail.log'),
+            'level' => 'debug',
+            'replace_placeholders' => true,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
