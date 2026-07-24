@@ -42,4 +42,8 @@ return [
         'api_key' => env('AI_GATEWAY_API_KEY'),
     ],
 
+    'site_owner' => [
+        'email' => env('SITE_OWNER_EMAIL'),
+    ],
+
 ];

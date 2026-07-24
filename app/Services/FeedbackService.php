@@ -5,11 +5,12 @@ namespace App\Services;
 use App\Models\Feedback;
 use App\Repositories\FeedbackRepositoryInterface;
 
-class FeedbackProcessingService
+class FeedbackService
 {
     public function __construct(
         private readonly FeedbackRepositoryInterface $feedbackRepository,
         private readonly AiProcessingService $aiProcessingService,
+        private readonly FeedbackNotifier $feedbackNotifier,
     ) {}
 
     public function process(array $data): Feedback
@@ -25,6 +26,8 @@ class FeedbackProcessingService
         $this->feedbackRepository->save($feedback);
 
         $this->aiProcessingService->process($feedback);
+
+        $this->feedbackNotifier->notify($feedback);
 
         return $feedback;
     }

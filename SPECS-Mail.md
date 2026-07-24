@@ -24,11 +24,13 @@
   2. пустая строка
   3. `Сообщение:`
   4. пустая строка
-  5. ровно `{{ $comment }}` — как он пришёл
-    точнее - как он "прошёл" (валидацию и санитацию)
+  5. ровно `{{ $comment }}` — ровно как пришло после санитации, но в любом случае - через фильтры безопасного вывода
   6. `<подпись>` — статический текст, часть самого шаблона (не переменная, не `.env`; `MAIL_SIGNATURE` из `.env` больше не используется — см. `ARCHITECTURE.md` §5).
+
+## Код
+Реализовано: `App\Mail\NewFeedbackMail`, `App\Services\FeedbackNotifier`, шаблоны `resources/views/mail/new-feedback/{subject,body}.blade.php`, вызов из `FeedbackService` (после AI-анализа, см. `SPECS-AI.md`). Проверено юнит- и feature-тестами (`Mail::fake()`), реальная отправка не тестировалась (нет настроенного реального `MAIL_MAILER`/SMTP в этом окружении — только структура письма и адресация).
 
 ## Тесты
 
-См. `TESTING.md` §3.5 — `tests/Unit/Mail/NewFeedbackMailTest.php`.
+См. `TESTING.md` §3.5 (`NewFeedbackMailTest`), §3.9 (`FeedbackNotifierTest`), §2.1 (`ContactMailTest`, Feature).
 

@@ -20,13 +20,13 @@
 | `test_allows_request_from_allowed_origin` / `test_blocks_request_from_disallowed_origin` / `test_blocks_request_when_port_does_not_match` | `tests/Feature/CorsTest.php` ✅ | CORS preflight по списку разрешённых origin'ов | — |
 | `test_successful_ai_extraction_saves_feedback_insight` | `tests/Feature/Api/V1/ContactAiExtractionTest.php` ✅ | Валидный запрос → `AiGatewayInterface::extract()` вызван, `FeedbackInsightRepositoryInterface::save()` вызван | AC 3.1 |
 | `test_ai_gateway_failure_does_not_break_the_request` | `tests/Feature/Api/V1/ContactAiExtractionTest.php` ✅ | AI-шлюз бросает исключение → запрос всё равно 201, `FeedbackInsightRepositoryInterface::save()` не вызван | AC 3.2 |
+| `test_successful_request_sends_one_mail_to_owner_with_user_cc` | `tests/Feature/Api/V1/ContactMailTest.php` ✅ | Валидный запрос → 201, ровно одно письмо в очереди, `to` = `SITE_OWNER_EMAIL`, `cc` содержит `$feedback->email` | AC 4.1, AC 4.2 |
+| `test_validation_failure_does_not_send_mail` | `tests/Feature/Api/V1/ContactMailTest.php` ✅ | Невалидный запрос → 422, писем не отправлено | AC 4.1/4.2 (негатив) |
 | `it_accepts_valid_payload` | *(не написан)* | Валидные `name`/`phone`/`email`/`comment` → 201, тело содержит `message` и `data` | AC 1.1, AC 1.2 |
 | `it_rejects_missing_required_field` | *(не написан)* | По очереди отсутствует каждое обязательное поле → 422 | AC 2.1, §7 |
 | `it_rejects_invalid_email_format` | *(не написан)* | `email` некорректного формата → 422 | AC 2.2, §7 |
 | `it_rejects_comment_longer_than_2000_chars` | *(не написан)* | `comment` > `FEEDBACK_COMMENT_MAX_LENGTH` («простыня») → 422 | AC 2.3, §7 |
 | `it_returns_500_without_leaking_internals_on_unexpected_error` | *(не написан)* | Смоделированное исключение → 500, JSON без стектрейса, запись в `storage/logs/laravel.log` | AC 2.5, §7 |
-| `it_sends_one_mail_to_owner_with_user_cc` | *(не написан, ждёт кода Mail-слоя)* | `Mail::fake()` → одно письмо, `to` = `SITE_OWNER_EMAIL`, `cc` содержит `$feedback->email` | AC 4.1, AC 4.2 |
-| `it_does_not_send_mail_on_validation_failure` | *(не написан)* | Невалидный запрос → писем не отправлено | AC 4.1/4.2 (негатив) |
 | `it_writes_valid_feedback_to_feedback_storage_channel` | *(не написан)* | Валидный запрос → канал `feedback_storage` получает запись | AC 5.1 |
 | `it_does_not_write_invalid_requests_to_feedback_storage_channel` | *(не написан)* | Невалидный запрос → канал `feedback_storage` не тронут | AC 5.1 (негатив) |
 
@@ -45,9 +45,9 @@
 * `it_collapses_only_horizontal_whitespace` — повторяющиеся пробелы/табы схлопываются, переносы — нет.
 * `it_trims_leading_and_trailing_whitespace_per_line_and_overall`.
 
-### 3.2. `tests/Unit/FeedbackProcessingServiceTest.php` ✅
-* `test_process_saves_feedback_with_generated_id_and_unmodified_comment` — `id` формата `^\d{14}-\d{6}$`, `comment` не изменяется (AI больше не мутирует текст — см. §3.5).
-* `test_process_saves_feedback_before_calling_ai_processing` — порядок вызовов: сначала `FeedbackRepositoryInterface::save()`, потом `AiProcessingService::process()` (важно для `SPECS-AI.md`, т.к. `FeedbackInsight` физически не может попасть в ту же запись `feedback_storage`).
+### 3.2. `tests/Unit/FeedbackServiceTest.php` ✅ *(переименован из `FeedbackProcessingServiceTest.php`)*
+* `test_process_saves_feedback_with_generated_id_and_unmodified_comment` — `id` формата `^\d{14}-\d{6}$`, `comment` не изменяется (AI не мутирует текст — см. §3.5).
+* `test_process_calls_dependencies_in_correct_order` — порядок вызовов: `FeedbackRepositoryInterface::save()` → `AiProcessingService::process()` → `FeedbackNotifier::notify()` (важно для `SPECS-AI.md`: `FeedbackInsight` не может попасть в ту же запись `feedback_storage`).
 
 ### 3.3. `tests/Unit/AiProcessingServiceTest.php` ✅
 См. `SPECS-AI.md`.
@@ -59,12 +59,18 @@
 ### 3.4. `tests/Unit/LogFeedbackRepositoryTest.php` ✅
 * `test_save_logs_feedback_data_to_feedback_storage_channel` — пишет в канал `feedback_storage` (не `single`).
 
-### 3.5. `tests/Unit/Mail/NewFeedbackMailTest.php` *(не написан, код Mail-слоя ещё не реализован)*
+### 3.5. `tests/Unit/NewFeedbackMailTest.php` ✅
 Содержание письма/шаблонизация — см. `SPECS-Mail.md`.
-* `it_has_subject_with_request_id`
-* `it_renders_body_with_exact_template`
-* `it_is_addressed_to_owner_and_cc_to_user`
-* `it_body_contains_no_html_tags`
+* `test_has_subject_with_request_id` — тема (рендер `subject.blade.php`) — `Запрос #<id>`.
+* `test_renders_body_with_exact_template` — тело (рендер `body.blade.php`) посимвольно совпадает со спекой.
+* `test_body_contains_no_html_tags` — несмотря на движок Blade, тело — чистый текст (`Content(text: ...)`, не `html`/`htmlString`).
+* `test_comment_is_rendered_escaped` — `{{ $comment }}` в шаблоне (не `{!! !!}`) — только безопасный (экранированный) вывод, даже в plain-text части.
+
+Адресация (`To`/`Cc`) у самого `Mailable` не проверяется — она задаётся снаружи через `Mail::to()->cc()`, см. §3.9/§2.1.
+
+### 3.9. `tests/Unit/FeedbackNotifierTest.php` ✅
+* `test_sends_mail_to_owner_with_user_cc` — `to()` = `services.site_owner.email` (`SITE_OWNER_EMAIL`), `cc()` = `$feedback->email`.
+* `test_sends_exactly_one_mail` — ровно одно письмо в очереди на обращение.
 
 ### 3.6. `tests/Unit/OpenAiGatewayTest.php` ✅
 * `test_calls_chat_completions_endpoint_with_expected_body_and_headers` — URL, `Authorization: Bearer {AI_GATEWAY_API_KEY}`, тело (`model`/`temperature: 0`/`response_format`/`messages`).

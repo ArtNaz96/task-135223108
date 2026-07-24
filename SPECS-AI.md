@@ -64,7 +64,7 @@
 `AiAnalysisService` → `AiProcessingService` — **применено** в коде (файл `app/Services/AiAnalysisService.php` удалён).
 
 ## Код
-Реализовано по этой схеме: `AiRequestDTO`/`AiResponseDTO`, `AiGatewayInterface`/`OpenAiGateway` (OpenAI Chat Completions), `AiProcessingService` (оркестрация + graceful fallback), `FeedbackInsight`/`FeedbackInsightRepositoryInterface`/`LogFeedbackInsightRepository`, промпт-файл `resources/ai-prompts/feedback-extraction.txt`, конфигурация (`config/services.php`, `config/logging.php`), DI-биндинги (`AppServiceProvider`, `RepositoryServiceProvider`). `FeedbackProcessingService`/`Feedback` (модель) дополнены полем `id` и вызовом `AiProcessingService` — это уже относится к Feedback-слою, не к Mail, поэтому не гейтилось утверждением `SPECS-Mail.md`.
+Реализовано по этой схеме: `AiRequestDTO`/`AiResponseDTO`, `AiGatewayInterface`/`OpenAiGateway` (OpenAI Chat Completions), `AiProcessingService` (оркестрация + graceful fallback), `FeedbackInsight`/`FeedbackInsightRepositoryInterface`/`LogFeedbackInsightRepository`, промпт-файл `resources/ai-prompts/feedback-extraction.txt`, конфигурация (`config/services.php`, `config/logging.php`), DI-биндинги (`AppServiceProvider`, `RepositoryServiceProvider`). `FeedbackService` (тогда ещё `FeedbackProcessingService`, переименован позже вместе с Mail-слоем)/`Feedback` (модель) дополнены полем `id` и вызовом `AiProcessingService` — это уже относится к Feedback-слою, не к Mail, поэтому не гейтилось утверждением `SPECS-Mail.md`.
 
 ## Тесты
 См. `TESTING.md` §3.6–3.8 — `AiProcessingServiceTest`, `OpenAiGatewayTest`, `LogFeedbackInsightRepositoryTest`.
