@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -10,6 +11,7 @@ class RateLimitingTest extends TestCase
     public function test_contact_form_rate_limiter_blocks_excessive_requests(): void
     {
         Mail::fake();
+        Http::fake();
 
         $data = [
             'name' => 'John Doe',

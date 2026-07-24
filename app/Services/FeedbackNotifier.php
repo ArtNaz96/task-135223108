@@ -10,8 +10,7 @@ class FeedbackNotifier
 {
     public function notify(Feedback $feedback): void
     {
-        Mail::to((string) config('services.site_owner.email'))
-            ->cc($feedback->email)
-            ->queue(new NewFeedbackMail($feedback));
+        Mail::to((string) config('services.site_owner.email'))->queue(new NewFeedbackMail($feedback));
+        Mail::to($feedback->email)->queue(new NewFeedbackMail($feedback));
     }
 }

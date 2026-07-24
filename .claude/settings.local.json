@@ -16,7 +16,10 @@
       "PowerShell(Copy-Item .env.example .env)",
       "PowerShell(& \"C:\\\\.p\\\\.run\\\\PHP\\\\php.exe\" artisan key:generate)",
       "PowerShell(& \"C:\\\\.p\\\\.run\\\\PHP\\\\php.exe\" vendor\\\\bin\\\\phpunit *)",
-      "PowerShell(& \"C:\\\\.p\\\\.run\\\\PHP\\\\php.exe\" vendor\\\\bin\\\\phpunit --no-coverage --testdox tests\\\\Unit\\\\NewFeedbackMailTest.php 2>&1)"
+      "PowerShell(& \"C:\\\\.p\\\\.run\\\\PHP\\\\php.exe\" vendor\\\\bin\\\\phpunit --no-coverage --testdox tests\\\\Unit\\\\NewFeedbackMailTest.php 2>&1)",
+      "PowerShell(& \"C:\\\\.p\\\\.run\\\\PHP\\\\php.exe\" vendor\\\\bin\\\\phpunit --no-coverage --filter \"FeedbackNotifierTest|ContactMailTest\" --testdox)",
+      "PowerShell(& \"C:\\\\.p\\\\.run\\\\PHP\\\\php.exe\" vendor\\\\bin\\\\phpunit --no-coverage)",
+      "PowerShell(& \"C:\\\\.p\\\\.run\\\\PHP\\\\php.exe\" vendor\\\\bin\\\\phpunit --no-coverage --filter ArrayPrunerTest)"
     ]
   }
 }

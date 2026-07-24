@@ -66,6 +66,31 @@ class AiProcessingServiceTest extends TestCase
         $service->process($feedback);
     }
 
+    public function test_saves_payload_pruned_of_empty_values(): void
+    {
+        $feedback = $this->makeFeedback();
+        $rawPayload = [
+            'order' => ['order_id' => null, 'email' => null],
+            'products' => [],
+            'intent' => ['intent_category' => 'other', 'urgency' => false],
+        ];
+
+        $gatewayMock = $this->createMock(AiGatewayInterface::class);
+        $gatewayMock->expects($this->once())->method('extract')->willReturn(new AiResponseDTO($rawPayload));
+
+        $insightRepositoryMock = $this->createMock(FeedbackInsightRepositoryInterface::class);
+        $insightRepositoryMock->expects($this->once())
+            ->method('save')
+            ->with($this->callback(function (FeedbackInsight $insight) {
+                return $insight->payload === [
+                    'intent' => ['intent_category' => 'other', 'urgency' => false],
+                ];
+            }));
+
+        $service = new AiProcessingService($gatewayMock, $insightRepositoryMock, 'prompt');
+        $service->process($feedback);
+    }
+
     public function test_does_not_save_feedback_insight_on_gateway_failure(): void
     {
         $feedback = $this->makeFeedback();

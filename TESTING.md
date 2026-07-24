@@ -20,7 +20,7 @@
 | `test_allows_request_from_allowed_origin` / `test_blocks_request_from_disallowed_origin` / `test_blocks_request_when_port_does_not_match` | `tests/Feature/CorsTest.php` ✅ | CORS preflight по списку разрешённых origin'ов | — |
 | `test_successful_ai_extraction_saves_feedback_insight` | `tests/Feature/Api/V1/ContactAiExtractionTest.php` ✅ | Валидный запрос → `AiGatewayInterface::extract()` вызван, `FeedbackInsightRepositoryInterface::save()` вызван | AC 3.1 |
 | `test_ai_gateway_failure_does_not_break_the_request` | `tests/Feature/Api/V1/ContactAiExtractionTest.php` ✅ | AI-шлюз бросает исключение → запрос всё равно 201, `FeedbackInsightRepositoryInterface::save()` не вызван | AC 3.2 |
-| `test_successful_request_sends_one_mail_to_owner_with_user_cc` | `tests/Feature/Api/V1/ContactMailTest.php` ✅ | Валидный запрос → 201, ровно одно письмо в очереди, `to` = `SITE_OWNER_EMAIL`, `cc` содержит `$feedback->email` | AC 4.1, AC 4.2 |
+| `test_successful_request_sends_two_separate_mails_to_owner_and_user` | `tests/Feature/Api/V1/ContactMailTest.php` ✅ | Валидный запрос → 201, ровно два письма в очереди — одно с `to` = `SITE_OWNER_EMAIL`, другое с `to` = `$feedback->email`, без `cc` | AC 4.1, AC 4.2 |
 | `test_validation_failure_does_not_send_mail` | `tests/Feature/Api/V1/ContactMailTest.php` ✅ | Невалидный запрос → 422, писем не отправлено | AC 4.1/4.2 (негатив) |
 | `it_accepts_valid_payload` | *(не написан)* | Валидные `name`/`phone`/`email`/`comment` → 201, тело содержит `message` и `data` | AC 1.1, AC 1.2 |
 | `it_rejects_missing_required_field` | *(не написан)* | По очереди отсутствует каждое обязательное поле → 422 | AC 2.1, §7 |
@@ -53,8 +53,16 @@
 См. `SPECS-AI.md`.
 * `test_sends_comment_and_system_prompt_to_gateway`
 * `test_saves_feedback_insight_on_successful_extraction`
+* `test_saves_payload_pruned_of_empty_values` — репозиторий получает уже очищенный (`ArrayPruner::pruneEmpty()`) payload, не сырой ответ шлюза.
 * `test_does_not_save_feedback_insight_on_gateway_failure`
 * `test_does_not_propagate_gateway_exception`
+
+### 3.10. `tests/Unit/ArrayPrunerTest.php` ✅
+* `test_removes_null_and_empty_string_values`
+* `test_keeps_false_and_zero` — `false`/`0` не считаются пустыми значениями.
+* `test_removes_nested_array_that_becomes_empty` — ветка, полностью опустевшая после очистки, тоже убирается.
+* `test_reindexes_list_after_removing_empty_items` — списки (не ассоц. массивы) переиндексируются после удаления пустых элементов.
+* `test_prunes_real_ai_extraction_shaped_payload` — на реальном примере из лога (`order`/`pet`/`products` с одними `null` → убираются целиком, остаётся только содержательный `intent`).
 
 ### 3.4. `tests/Unit/LogFeedbackRepositoryTest.php` ✅
 * `test_save_logs_feedback_data_to_feedback_storage_channel` — пишет в канал `feedback_storage` (не `single`).
@@ -66,11 +74,12 @@
 * `test_body_contains_no_html_tags` — несмотря на движок Blade, тело — чистый текст (`Content(text: ...)`, не `html`/`htmlString`).
 * `test_comment_is_rendered_escaped` — `{{ $comment }}` в шаблоне (не `{!! !!}`) — только безопасный (экранированный) вывод, даже в plain-text части.
 
-Адресация (`To`/`Cc`) у самого `Mailable` не проверяется — она задаётся снаружи через `Mail::to()->cc()`, см. §3.9/§2.1.
+Адресация (`To`) у самого `Mailable` не проверяется — она задаётся снаружи через `Mail::to()`, см. §3.9/§2.1.
 
 ### 3.9. `tests/Unit/FeedbackNotifierTest.php` ✅
-* `test_sends_mail_to_owner_with_user_cc` — `to()` = `services.site_owner.email` (`SITE_OWNER_EMAIL`), `cc()` = `$feedback->email`.
-* `test_sends_exactly_one_mail` — ровно одно письмо в очереди на обращение.
+* `test_sends_separate_mail_to_owner` — одно из писем в очереди имеет `to()` = `services.site_owner.email` (`SITE_OWNER_EMAIL`), без `cc()`.
+* `test_sends_separate_mail_to_user` — другое письмо в очереди имеет `to()` = `$feedback->email`, без `cc()`.
+* `test_sends_exactly_two_mails` — ровно два письма в очереди на обращение.
 
 ### 3.6. `tests/Unit/OpenAiGatewayTest.php` ✅
 * `test_calls_chat_completions_endpoint_with_expected_body_and_headers` — URL, `Authorization: Bearer {AI_GATEWAY_API_KEY}`, тело (`model`/`temperature: 0`/`response_format`/`messages`).

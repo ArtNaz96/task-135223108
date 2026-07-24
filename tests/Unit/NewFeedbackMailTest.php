@@ -39,6 +39,8 @@ class NewFeedbackMailTest extends TestCase
             . "Сообщение:\n"
             . "\n"
             . "{$feedback->comment}\n"
+            . "\n"
+            . "---\n"
             . "С уважением, команда сайта"
         );
 

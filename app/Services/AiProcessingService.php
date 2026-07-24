@@ -7,6 +7,7 @@ use App\Models\Feedback;
 use App\Models\FeedbackInsight;
 use App\Repositories\FeedbackInsightRepositoryInterface;
 use App\Services\AI\AiGatewayInterface;
+use App\Support\ArrayPruner;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -26,7 +27,7 @@ class AiProcessingService
             );
 
             $this->feedbackInsightRepository->save(
-                new FeedbackInsight($feedback->id, $response->payload)
+                new FeedbackInsight($feedback->id, ArrayPruner::pruneEmpty($response->payload))
             );
         } catch (Throwable $e) {
             Log::error('AI feedback extraction failed', [

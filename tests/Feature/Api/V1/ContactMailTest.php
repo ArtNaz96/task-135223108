@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Mail\NewFeedbackMail;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -18,9 +19,10 @@ class ContactMailTest extends TestCase
         ];
     }
 
-    public function test_successful_request_sends_one_mail_to_owner_with_user_cc(): void
+    public function test_successful_request_sends_two_separate_mails_to_owner_and_user(): void
     {
         Mail::fake();
+        Http::fake();
         config(['services.site_owner.email' => 'owner@example.com']);
 
         $payload = $this->validPayload();
@@ -28,10 +30,12 @@ class ContactMailTest extends TestCase
 
         $response->assertStatus(201);
 
-        Mail::assertQueuedCount(1);
+        Mail::assertQueuedCount(2);
         Mail::assertQueued(NewFeedbackMail::class, function (NewFeedbackMail $mail) use ($payload) {
-            return $mail->hasTo('owner@example.com')
-                && $mail->hasCc($payload['email']);
+            return $mail->hasTo('owner@example.com') && $mail->cc === [];
+        });
+        Mail::assertQueued(NewFeedbackMail::class, function (NewFeedbackMail $mail) use ($payload) {
+            return $mail->hasTo($payload['email']) && $mail->cc === [];
         });
     }
 
