@@ -12,6 +12,7 @@ class RateLimitingTest extends TestCase
     {
         Mail::fake();
         Http::fake();
+        $this->withHeader('Authorization', 'Bearer test-token');
 
         $data = [
             'name' => 'John Doe',

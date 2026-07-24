@@ -29,6 +29,11 @@
 Все четыре пункта, по сути, — один общий пробел: **раздел README/документация (Шаг 6 плана) и Swagger (Шаг 4) вообще не начаты**, хотя весь backend-функционал под ними готов.
 
 ## Не реализовано — второстепенное (влияет на оценку качества, но не на «обязательную часть»)
-В `TESTING.md` до сих пор помечены как «не написан»: валидационные негативные сценарии (`it_rejects_*`), тест на 500-ошибку без утечки внутренностей, тесты `health`/`metrics`, `InputSanitizerTest`, тесты записи/незаписи в `feedback_storage`. Код, который они должны проверять, в основном уже есть и работает, но покрытия тестами по ним пока нет.
+
+Не написаны (код, который они должны проверять, в основном уже есть и работает — это пробел именно в тестовом покрытии):
+
+* `POST /api/v1/contact` (`TESTING.md` §2.1): `it_accepts_valid_payload`, `it_rejects_missing_required_field`, `it_rejects_invalid_email_format`, `it_rejects_comment_longer_than_2000_chars`, `it_returns_500_without_leaking_internals_on_unexpected_error`, `it_writes_valid_feedback_to_feedback_storage_channel`, `it_does_not_write_invalid_requests_to_feedback_storage_channel`.
+* `GET /api/v1/health` / `GET /api/v1/metrics` (`TESTING.md` §2.2–2.3): `it_returns_ok_status`, `it_returns_not_implemented` — не покрыты тестами. **Это нормально/приемлемо** — обе точки являются заглушками, реальная логика (и тесты под неё) — предмет будущей доработки (см. `PLAN.md`, «Желательно», Шаг 9).
+* `tests/Unit/Support/InputSanitizerTest.php` (`TESTING.md` §3.1) — целиком не написан.
 
 **Итог: с точки зрения буквального «Backend без API/AI — не считается выполненным» — всё выполнено. Но по разделу «Что предоставить»/«Infrastructure (обязательно)» есть два явных пробела (Swagger, README+примеры+деплой), которые прямо влияют на приёмку.**

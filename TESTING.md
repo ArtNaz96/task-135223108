@@ -17,28 +17,29 @@
 | Тест | Файл | Сценарий | AC |
 |---|---|---|---|
 | `test_contact_form_rate_limiter_blocks_excessive_requests` | `tests/Feature/RateLimitingTest.php` ✅ | 6-й запрос с одного IP в минуту → 429 | AC 2.4, §7 |
+| `test_rejects_request_without_token` / `test_rejects_request_with_wrong_token` / `test_accepts_request_with_correct_token` | `tests/Feature/Api/V1/ContactTokenAuthTest.php` ✅ | `Authorization: Bearer` отсутствует/неверный → 401; корректный `API_ACCESS_TOKEN` → запрос проходит | AC 2.6, §7 |
 | `test_allows_request_from_allowed_origin` / `test_blocks_request_from_disallowed_origin` / `test_blocks_request_when_port_does_not_match` | `tests/Feature/CorsTest.php` ✅ | CORS preflight по списку разрешённых origin'ов | — |
 | `test_successful_ai_extraction_saves_feedback_insight` | `tests/Feature/Api/V1/ContactAiExtractionTest.php` ✅ | Валидный запрос → `AiGatewayInterface::extract()` вызван, `FeedbackInsightRepositoryInterface::save()` вызван | AC 3.1 |
 | `test_ai_gateway_failure_does_not_break_the_request` | `tests/Feature/Api/V1/ContactAiExtractionTest.php` ✅ | AI-шлюз бросает исключение → запрос всё равно 201, `FeedbackInsightRepositoryInterface::save()` не вызван | AC 3.2 |
 | `test_successful_request_sends_two_separate_mails_to_owner_and_user` | `tests/Feature/Api/V1/ContactMailTest.php` ✅ | Валидный запрос → 201, ровно два письма в очереди — одно с `to` = `SITE_OWNER_EMAIL`, другое с `to` = `$feedback->email`, без `cc` | AC 4.1, AC 4.2 |
 | `test_validation_failure_does_not_send_mail` | `tests/Feature/Api/V1/ContactMailTest.php` ✅ | Невалидный запрос → 422, писем не отправлено | AC 4.1/4.2 (негатив) |
-| `it_accepts_valid_payload` | *(не написан)* | Валидные `name`/`phone`/`email`/`comment` → 201, тело содержит `message` и `data` | AC 1.1, AC 1.2 |
-| `it_rejects_missing_required_field` | *(не написан)* | По очереди отсутствует каждое обязательное поле → 422 | AC 2.1, §7 |
-| `it_rejects_invalid_email_format` | *(не написан)* | `email` некорректного формата → 422 | AC 2.2, §7 |
-| `it_rejects_comment_longer_than_2000_chars` | *(не написан)* | `comment` > `FEEDBACK_COMMENT_MAX_LENGTH` («простыня») → 422 | AC 2.3, §7 |
-| `it_returns_500_without_leaking_internals_on_unexpected_error` | *(не написан)* | Смоделированное исключение → 500, JSON без стектрейса, запись в `storage/logs/laravel.log` | AC 2.5, §7 |
-| `it_writes_valid_feedback_to_feedback_storage_channel` | *(не написан)* | Валидный запрос → канал `feedback_storage` получает запись | AC 5.1 |
-| `it_does_not_write_invalid_requests_to_feedback_storage_channel` | *(не написан)* | Невалидный запрос → канал `feedback_storage` не тронут | AC 5.1 (негатив) |
+| `it_accepts_valid_payload` | — | Валидные `name`/`phone`/`email`/`comment` → 201, тело содержит `message` и `data` | AC 1.1, AC 1.2 |
+| `it_rejects_missing_required_field` | — | По очереди отсутствует каждое обязательное поле → 422 | AC 2.1, §7 |
+| `it_rejects_invalid_email_format` | — | `email` некорректного формата → 422 | AC 2.2, §7 |
+| `it_rejects_comment_longer_than_2000_chars` | — | `comment` > `FEEDBACK_COMMENT_MAX_LENGTH` («простыня») → 422 | AC 2.3, §7 |
+| `it_returns_500_without_leaking_internals_on_unexpected_error` | — | Смоделированное исключение → 500, JSON без стектрейса, запись в `storage/logs/laravel.log` | AC 2.5, §7 |
+| `it_writes_valid_feedback_to_feedback_storage_channel` | — | Валидный запрос → канал `feedback_storage` получает запись | AC 5.1 |
+| `it_does_not_write_invalid_requests_to_feedback_storage_channel` | — | Невалидный запрос → канал `feedback_storage` не тронут | AC 5.1 (негатив) |
 
 ### 2.2. `GET /api/v1/health`
-* `it_returns_ok_status` *(не написан)* — 200, JSON `{"status": "ok"}`.
+* `it_returns_ok_status` — 200, JSON `{"status": "ok"}`.
 
 ### 2.3. `GET /api/v1/metrics`
-* `it_returns_not_implemented` *(не написан)* — `501 Not Implemented` (см. `ARCHITECTURE.md` §4).
+* `it_returns_not_implemented` — `501 Not Implemented` (см. `ARCHITECTURE.md` §4).
 
 ## 3. Unit-тесты
 
-### 3.1. `tests/Unit/Support/InputSanitizerTest.php` *(не написан)*
+### 3.1. `tests/Unit/Support/InputSanitizerTest.php`
 * `it_strips_html_tags` — `<script>alert(1)</script>текст` → `текст`.
 * `it_removes_control_characters_except_newline_tab_cr` — `\x00`/`\x1F`/`\x7F` удаляются, `\n`/`\r`/`\t` остаются.
 * `it_preserves_line_breaks_in_multiline_comment` — переносы строк не схлопываются.

@@ -38,8 +38,7 @@ class ArrayPrunerTest extends TestCase
     public function test_prunes_real_ai_extraction_shaped_payload(): void
     {
         $payload = [
-            'order' => ['order_id' => null, 'phone_number' => null, 'email' => null, 'delivery_address' => null, 'delivery_date' => null],
-            'pet' => ['pet_species' => null, 'pet_breed' => null, 'pet_age_group' => null, 'pet_health_tags' => []],
+            'customer' => ['order_id' => null, 'phone_number' => null, 'email' => null, 'delivery_address' => null, 'delivery_date' => null],
             'products' => [],
             'intent' => ['intent_category' => 'other', 'urgency' => false, 'problem_description' => 'Test comment for rate limiting'],
         ];

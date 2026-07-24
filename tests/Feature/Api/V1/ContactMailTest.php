@@ -26,7 +26,8 @@ class ContactMailTest extends TestCase
         config(['services.site_owner.email' => 'owner@example.com']);
 
         $payload = $this->validPayload();
-        $response = $this->postJson('/api/v1/contact', $payload);
+        $response = $this->withHeader('Authorization', 'Bearer test-token')
+            ->postJson('/api/v1/contact', $payload);
 
         $response->assertStatus(201);
 
@@ -43,10 +44,11 @@ class ContactMailTest extends TestCase
     {
         Mail::fake();
 
-        $response = $this->postJson('/api/v1/contact', [
-            'name' => 'Jane Doe',
-            // phone/email/comment отсутствуют
-        ]);
+        $response = $this->withHeader('Authorization', 'Bearer test-token')
+            ->postJson('/api/v1/contact', [
+                'name' => 'Jane Doe',
+                // phone/email/comment отсутствуют
+            ]);
 
         $response->assertStatus(422);
         Mail::assertNothingQueued();

@@ -40,7 +40,8 @@ class ContactAiExtractionTest extends TestCase
             ->withArgs(fn ($insight) => $insight->payload === $payload);
         $this->app->instance(FeedbackInsightRepositoryInterface::class, $insightRepositoryMock);
 
-        $response = $this->postJson('/api/v1/contact', $this->validPayload());
+        $response = $this->withHeader('Authorization', 'Bearer test-token')
+            ->postJson('/api/v1/contact', $this->validPayload());
 
         $response->assertStatus(201);
     }
@@ -59,7 +60,8 @@ class ContactAiExtractionTest extends TestCase
         $insightRepositoryMock->shouldNotReceive('save');
         $this->app->instance(FeedbackInsightRepositoryInterface::class, $insightRepositoryMock);
 
-        $response = $this->postJson('/api/v1/contact', $this->validPayload());
+        $response = $this->withHeader('Authorization', 'Bearer test-token')
+            ->postJson('/api/v1/contact', $this->validPayload());
 
         // Провал AI не должен ломать основной сценарий (graceful fallback).
         $response->assertStatus(201);

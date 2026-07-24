@@ -46,4 +46,8 @@ return [
         'email' => env('SITE_OWNER_EMAIL'),
     ],
 
+    'api_access' => [
+        'token' => env('API_ACCESS_TOKEN'),
+    ],
+
 ];

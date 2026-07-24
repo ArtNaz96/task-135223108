@@ -52,7 +52,8 @@
 
 ### 2.6. Middleware и сквозная функциональность
 * **Rate limiting**: защита `POST /api/v1/contact` от спама. Базовый вариант — Laravel-овский `throttle` middleware с файловым/кэш-драйвером лимитера; при необходимости кастомизации — отдельный **`FeedbackRateLimiter`** (именованный лимитер через `RateLimiter::for()`), настраиваемый через `.env`.
-* **CORS**: используется штатный `HandleCors` middleware Laravel + `config/cors.php`.
+* **Токен авторизации** — **`EnsureApiAccessToken`**, middleware на `POST /api/v1/contact`: сверяет заголовок `Authorization: Bearer <token>` с `API_ACCESS_TOKEN` (через `hash_equals()`, timing-safe сравнение). Не настроен (`API_ACCESS_TOKEN` пуст) — fail closed, `401` на любой запрос. Причина защиты — эндпоинт публичный, но реально расходует платную AI-квоту и шлёт письма на настоящий email, поэтому нужен доступный только легитимному фронтенду shared-secret, а не только rate limiting (см. `PRODUCT.md`).
+* **CORS**: используется штатный `HandleCors` middleware Laravel + `config/cors.php`, список разрешённых origin'ов — `CORS_ALLOWED_ORIGINS` в `.env` (через запятую).
 * **Force JSON**: middleware/трейт, гарантирующий, что API всегда отвечает `application/json` (в т.ч. на ошибки валидации/сервера).
 * **Глобальный обработчик ошибок**: настраивается в `bootstrap/app.php` (`->withExceptions()`, Laravel 13) — приводит любые исключения (валидация, AI-сбои, прочие) к единому JSON-формату ошибки с корректным HTTP-статусом. Сам факт ошибки пишется в стандартный лог (`storage/logs/laravel.log`, канал по умолчанию) — отдельно от `feedback_storage`.
 
@@ -67,7 +68,9 @@
 
 ## 5. Инфраструктура (обязательные требования ТЗ, детальная проработка — позже)
 Ниже перечислены только соответствующие юниты/точки расширения — их полная реализация в объём текущей итерации не входит:
-* Переменные окружения (`.env`): `AI_GATEWAY_URL`, `AI_GATEWAY_TIMEOUT`, `AI_GATEWAY_MODEL`, `AI_GATEWAY_API_KEY` (см. `SPECS-AI.md`), `SITE_OWNER_EMAIL`, `FEEDBACK_RATE_LIMIT_PER_MINUTE`, `FEEDBACK_NAME_MAX_LENGTH`, `FEEDBACK_COMMENT_MAX_LENGTH`. (`MAIL_SIGNATURE` больше не используется — подпись теперь часть шаблона письма, см. `SPECS-Mail.md`.)
+* Переменные окружения (`.env`): `AI_GATEWAY_URL`, `AI_GATEWAY_TIMEOUT`, `AI_GATEWAY_MODEL`, `AI_GATEWAY_API_KEY` (см. `SPECS-AI.md`), `SITE_OWNER_EMAIL`, `FEEDBACK_RATE_LIMIT_PER_MINUTE`, `FEEDBACK_NAME_MAX_LENGTH`, `FEEDBACK_COMMENT_MAX_LENGTH`,
+`API_ACCESS_TOKEN` (см. §2.6),
+ `CORS_ALLOWED_ORIGINS` (см. §2.6). 
 * Логирование в файл: канал `Monolog` `feedback_storage` / `storage/logs/feedback.log` — валидные обращения (`FeedbackRepository` v1, имитация БД); отдельный канал `feedback_insight_storage` / `storage/logs/feedback-insight.log` — результаты AI-извлечения, только при успехе (см. `SPECS-AI.md`). Невалидные запросы не логируются (нечего сохранять); непредвиденные (неконтролируемые) ошибки — забота глобального обработчика ошибок, а не этих каналов.
 * Swagger/OpenAPI документация: аннотации на контроллерах либо отдельный `openapi.yaml`, генерируемый пакетом типа `l5-swagger`.
 
@@ -86,5 +89,6 @@
 | Отсутствует обязательное поле (`name`/`phone`/`email`/`comment`) | `FeedbackRequest` (Laravel `ValidationException`) | 422 | нет |
 | Некорректный формат email | `FeedbackRequest` (Laravel `ValidationException`) | 422 | нет |
 | Комментарий превышает максимальную длину («простыня») | `FeedbackRequest` (Laravel `ValidationException`) | 422 | нет |
+| Отсутствующий/неверный токен авторизации (`Authorization: Bearer`) | `EnsureApiAccessToken` middleware | 401 | нет |
 | Превышен лимит запросов (rate limiting) | `throttle` / `FeedbackRateLimiter` | 429 | нет |
 | Любая непредвиденная (необработанная) ошибка | Глобальный обработчик ошибок (`bootstrap/app.php` → `withExceptions()`) | 500 | да, `storage/logs/laravel.log` |

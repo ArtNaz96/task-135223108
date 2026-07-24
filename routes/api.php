@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function () {
     Route::post('/contact', FeedbackController::class)
-        ->middleware('throttle:contact-form')
+        ->middleware(['api.token', 'throttle:contact-form'])
         ->name('contact.store');
 
     Route::get('/health', HealthController::class)->name('health.show');
