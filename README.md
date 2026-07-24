@@ -36,29 +36,19 @@ Backend-сервис для лендинг-презентации разрабо
 4. **Конфигурация `.env`:**
    Отредактируйте переменные в `.env` при необходимости:
    ```env
-   APP_NAME="Portfolio API"
-   APP_ENV=local
-   APP_DEBUG=true
-   APP_URL=http://localhost:8000
-
-   # Почтовый драйвер (log сохраняет письма в storage/logs/mail.log)
-   MAIL_MAILER=log
-   SITE_OWNER_EMAIL=owner@example.com
-
-   # Интеграция с AI
-   AI_GATEWAY_URL=https://api.openai.com/v1
-   AI_GATEWAY_KEY=your_openai_api_key_here
-   AI_GATEWAY_MODEL=gemini-advanced
-   AI_GATEWAY_TIMEOUT=10
-
-   # Ограничение запросов
-   FEEDBACK_RATE_LIMIT_PER_MINUTE=5
-
-   # CORS
-   CORS_ALLOWED_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
+AI_GATEWAY_URL=http://127.0.0.1:8101/openai/v1
+AI_GATEWAY_TIMEOUT=10
+AI_GATEWAY_MODEL=gemini-advanced
+AI_GATEWAY_API_KEY=
+SITE_OWNER_EMAIL=owner@example.com
+FEEDBACK_RATE_LIMIT_PER_MINUTE=5
+FEEDBACK_NAME_MAX_LENGTH=255
+FEEDBACK_COMMENT_MAX_LENGTH=2000
+API_ACCESS_TOKEN=<token>
+CORS_ALLOWED_ORIGINS=*
    ```
 
-5. **Запуск локального сервера разработки:**
+5. **Запуск локального сервера:**
    ```bash
    php artisan serve --port=8000
    ```
@@ -71,7 +61,7 @@ Backend-сервис для лендинг-презентации разрабо
 7. **Дополнительно** 
    Проект также доступен в интернет по адресу: http://31.77.169.148:8000.
    Нужно будет передать заголовок:
-   "Authorization: Bearer 7c2fcf014f7ec71eda52a9cda90afc2702f06114e7c20ffa262cc96fb3ec0af1"
+   "Authorization: Bearer <token>"
 
 ---
 
@@ -80,7 +70,7 @@ Backend-сервис для лендинг-презентации разрабо
 * **Backend Framework:** [Laravel 13](https://laravel.com/) (PHP 8.2+) — легковесная REST-ориентированная архитектура.
 * **Логирование и Хранение:** [Monolog](https://github.com/Seldaek/monolog) — кастомные файловые каналы в `storage/logs/`.
 * **AI Provider:** OpenAI API / AI Gateway (совместимый Chat Completions API) — модель `gemini-advanced`.
-* **Тестирование:** PHPUnit / Pest Framework (Unit & Feature тесты).
+* **Тестирование:** PHPUnit (Unit & Feature тесты).
 * **Уведомления:** Laravel Mailables / Queue System (в режиме `sync` для локального окружения).
 
 ---
@@ -128,6 +118,7 @@ Backend-сервис для лендинг-презентации разрабо
 👉 **[http://127.0.0.1:8000/docs.html](http://127.0.0.1:8000/docs.html)** (спецификация в YAML: `/openapi.yaml`)
 
 ### Валидация и коды ошибок
+* **`401 Unauthorized`:** Отсутствующий или неверный токен авторизации (`Authorization: Bearer`).
 * **`422 Unprocessable Entity`:** Ошибка валидации входных данных (отсутствие обязательных полей, невалидный email/phone).
 * **`429 Too Many Requests`:** Превышение лимита отправки сообщений (более 5 запросов в минуту с одного IP).
 * **`500 Internal Server Error`:** Непредвиденная критическая ошибка сервера.
@@ -151,6 +142,7 @@ curl -i -X GET http://127.0.0.1:8000/api/v1/health \
 #### 2. Успешная отправка формы (`POST /api/v1/contact`)
 ```bash
 curl -i -X POST http://127.0.0.1:8000/api/v1/contact \
+  -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
@@ -214,30 +206,12 @@ curl -i -X POST http://127.0.0.1:8000/api/v1/contact \
 AI-компонент на базе OpenAI Chat Completions API выполняет интеллектуальное извлечение структурированных данных (Structured Insights Extraction) из полученного от пользователя комментария.
 
 ### Извлекаемые сущности:
-1. **`summary`:** Краткая суть обращения (до 1–2 предложений).
-2. **`sentiment`:** Тональность (`positive`, `neutral`, `negative`).
-3. **`category`:** Категория обращения (`lead`, `job_offer`, `collaboration`, `spam`, `other`).
-4. **`urgency`:** Срочность ответа (`low`, `medium`, `high`).
-5. **`budget_mentioned`:** Упомянутый бюджет (если найден).
-6. **`action_items`:** Список необходимых действий для ответа.
+Согласно системному промпту (`resources/ai-prompts/feedback-extraction.txt`), AI возвращает JSON с тремя блоками:
+1. **`customer`** — `order_id`, `phone_number`, `email`, `delivery_address`, `delivery_date`.
+2. **`products`** (массив, по одной записи на каждый упомянутый товар) — `brand`, `product_type`, `variant`, `size_weight`, `quantity`.
+3. **`intent`** — `intent_category` (`delay` / `return` / `consultation` / `defect` / `other`), `urgency` (`true`/`false`), `problem_description`.
 
-### Промпт системы
-Промпт располагается в `resources/ai-prompts/feedback-extraction.txt` и заставляет модель возвращать только строгий JSON без стороннего Markdown-оформления:
-
-```text
-You are an AI data extraction assistant for a software developer's portfolio website.
-Analyze the user's feedback message and extract structured insights into a valid JSON object.
-
-Output Schema (JSON only):
-{
-  "summary": "Short summary",
-  "sentiment": "positive|neutral|negative",
-  "category": "lead|job_offer|collaboration|spam|other",
-  "urgency": "low|medium|high",
-  "budget_mentioned": "string or null",
-  "action_items": ["item 1", "item 2"]
-}
-```
+Незаполненные поля приходят как `null`/`[]` и перед сохранением очищаются (`App\Support\ArrayPruner::pruneEmpty()`), чтобы не раздувать лог пустыми JSON-каркасами без полезной информации.
 
 ### Механизм Graceful Fallback
 1. Вызов AI выполняется в асинхронном/изолированном стиле внутри `AiProcessingService`.
@@ -250,11 +224,10 @@ Output Schema (JSON only):
 
 ### Генерируемый код
 * Практически весь.
-
 ### Какие промпты использовали
-* Я их давал много. Примеры промптов находятся в папке prompt.examples
+* Я их давал много. Примеры промптов находятся в папке `/prompt.examples`.
 ### Что пришлось исправлять вручную
-* Будет попозже.
+* Сгенерённые AI-ем спеки, для большей точности.
 
 ---
 
