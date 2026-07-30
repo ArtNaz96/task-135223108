@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -10,11 +11,12 @@ use Tests\TestCase;
 
 class ContactStorageTest extends TestCase
 {
+    use DatabaseMigrations;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Тестовый токен из phpunit.xml (API_ACCESS_TOKEN=test-token) — не реальный секрет из .env.
         $this->withHeader('Authorization', 'Bearer test-token');
     }
 
@@ -22,20 +24,6 @@ class ContactStorageTest extends TestCase
     {
         Mail::fake();
         Http::fake();
-
-        $feedbackLoggerMock = $this->createMock(LoggerInterface::class);
-        $feedbackLoggerMock->expects($this->once())
-            ->method('info');
-
-        Log::shouldReceive('channel')
-            ->with('feedback_storage')
-            ->andReturn($feedbackLoggerMock);
-
-        Log::shouldReceive('channel')
-            ->withAnyArgs()
-            ->andReturnUsing(fn () => $this->createMock(LoggerInterface::class));
-
-        Log::shouldReceive('error')->byDefault();
 
         $payload = [
             'name' => 'John Doe',
@@ -46,19 +34,16 @@ class ContactStorageTest extends TestCase
 
         $response = $this->postJson('/api/v1/contact', $payload);
         $response->assertStatus(201);
+
+        $this->assertDatabaseHas('feedback', [
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+        ]);
     }
 
     public function test_it_does_not_write_invalid_requests_to_feedback_storage_channel(): void
     {
         Mail::fake();
-
-        $feedbackLoggerMock = $this->createMock(LoggerInterface::class);
-        $feedbackLoggerMock->expects($this->never())
-            ->method('info');
-
-        Log::shouldReceive('channel')
-            ->with('feedback_storage')
-            ->andReturn($feedbackLoggerMock);
 
         $payload = [
             'name' => 'John Doe',
@@ -67,5 +52,10 @@ class ContactStorageTest extends TestCase
 
         $response = $this->postJson('/api/v1/contact', $payload);
         $response->assertStatus(422);
+
+        $this->assertDatabaseMissing('feedback', [
+            'name' => 'John Doe',
+        ]);
     }
 }
+

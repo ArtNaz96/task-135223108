@@ -3,12 +3,15 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Mail\NewFeedbackMail;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class ContactMailTest extends TestCase
 {
+    use DatabaseMigrations;
+
     private function validPayload(): array
     {
         return [
@@ -54,3 +57,4 @@ class ContactMailTest extends TestCase
         Mail::assertNothingQueued();
     }
 }
+

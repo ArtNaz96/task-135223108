@@ -4,10 +4,13 @@ namespace Tests\Feature;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Tests\TestCase;
 
 class RateLimitingTest extends TestCase
 {
+    use DatabaseMigrations;
+
     public function test_contact_form_rate_limiter_blocks_excessive_requests(): void
     {
         Mail::fake();

@@ -2,10 +2,10 @@
 
 namespace App\Providers;
 
+use App\Repositories\DatabaseFeedbackInsightRepository;
+use App\Repositories\DatabaseFeedbackRepository;
 use App\Repositories\FeedbackInsightRepositoryInterface;
 use App\Repositories\FeedbackRepositoryInterface;
-use App\Repositories\LogFeedbackInsightRepository;
-use App\Repositories\LogFeedbackRepository;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -14,12 +14,12 @@ class RepositoryServiceProvider extends ServiceProvider
     {
         $this->app->bind(
             FeedbackRepositoryInterface::class,
-            LogFeedbackRepository::class
+            DatabaseFeedbackRepository::class
         );
 
         $this->app->bind(
             FeedbackInsightRepositoryInterface::class,
-            LogFeedbackInsightRepository::class
+            DatabaseFeedbackInsightRepository::class
         );
     }
 
